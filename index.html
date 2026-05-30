@@ -1157,7 +1157,7 @@ const LOGO_B64 = 'data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BS
 //  CONFIG — Paste your GAS URL here before deploying
 // ════════════════════════════════════════════════════════════
 const CONFIG = {
-  GAS_URL: '',          // ← Paste GAS Web App URL here
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwF4WUXtllW4RgbNJanbXL33t_rLWXlXQo2G6YckR1lOtQNfUbmNV_sXzH2baWD8DhOoA/exec',          // ← Paste GAS Web App URL here
   SEM_START: '2026-01-15',
   TOTAL_WEEKS: 16,
   UNIVERSITY: 'Isra University',
@@ -2439,7 +2439,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Restore session
   const saved=localStorage.getItem('session');
   if(saved){try{const s=JSON.parse(saved);if(s?.token&&s?.user){SESSION=s;bootApp();return;}}catch{}}
-  if(GAS_URL)console.log('GAS URL loaded from storage');
+  if(CONFIG.GAS_URL) { GAS_URL = CONFIG.GAS_URL; localStorage.setItem('gas_url', CONFIG.GAS_URL); }
 });
 // Save session on login
 const _origBootApp=bootApp;
