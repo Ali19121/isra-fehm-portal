@@ -1,7 +1,7 @@
 // ============================================================
 //  FEHM-E-QURAN COURSE MONITORING PORTAL
 //  Google Apps Script Backend — Paste this in script.google.com
-//  Version 2.0 | Complete Backend
+//  Version 3.0 | Complete Backend (additive upgrade)
 // ============================================================
 //
 //  SETUP INSTRUCTIONS:
@@ -118,6 +118,10 @@ function doPost(e) {
       case 'updateTimetableSlot': return respond(updateTimetableSlot(caller, body));
       case 'deleteTimetableSlot': return respond(deleteTimetableSlot(caller, body));
 
+      case 'sync':                return respond(syncAction(caller, body));
+      case 'getComparison':       return respond(getComparison(caller, body));
+      case 'aiChat':              return respond(aiChat(caller, body));
+
       default: return respond({ ok: false, error: 'Unknown action: ' + action }, 400);
     }
   } catch (err) {
@@ -152,7 +156,7 @@ function setupSheets() {
     [SH.USERS]: [
       'UserID','FullName','Username','PasswordHash','Role',
       'DepartmentID','CourseID','Section','CoordinatorID',
-      'Status','Email','CreatedAt','UpdatedAt'
+      'Status','Email','CreatedAt','UpdatedAt','LastSeen'
     ],
     [SH.DEPARTMENTS]: [
       'DeptID','DeptName','DeptCode','HeadName','Status','CreatedAt'
@@ -176,7 +180,8 @@ function setupSheets() {
       'TajweedTopic','TajweedStatus','TranslationStatus','SurahPracticed',
       'Attendance','TotalStudents','UnderstandingLevel',
       'Observations','Issues','Suggestions',
-      'SubmittedAt','Status','CoordRemarks','CoordID','ApprovedAt'
+      'SubmittedAt','Status','CoordRemarks','CoordID','ApprovedAt',
+      'BookUnit','StudentYear','Semester','UpdatedAt'
     ],
     [SH.OBSERVATIONS]: [
       'ObsID','ReportID','LecturerID','Type','Description','CreatedAt'
@@ -353,6 +358,7 @@ function handleLogin(body) {
 }
 
 function handleLogout(token) {
+  CacheService.getScriptCache().remove('tk_' + token);
   const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName(SH.SESSIONS);
   const data  = sheet.getDataRange().getValues();
@@ -367,16 +373,17 @@ function handleLogout(token) {
 
 function validateToken(token) {
   if (!token) return { ok: false };
+  const cache = CacheService.getScriptCache();
+  const hit = cache.get('tk_' + token);
+  if (hit) return { ok: true, user: JSON.parse(hit) };
   const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(SH.SESSIONS);
-  const data  = sheet.getDataRange().getValues();
+  const data  = ss.getSheetByName(SH.SESSIONS).getDataRange().getValues();
   const row   = data.slice(1).find(r => r[0] === token && r[6] === true);
   if (!row) return { ok: false };
   if (new Date(row[5]) < new Date()) return { ok: false };
-  return {
-    ok: true,
-    user: { id: row[1], username: row[2], role: row[3] }
-  };
+  const user = { id: row[1], username: row[2], role: row[3] };
+  cache.put('tk_' + token, JSON.stringify(user), 600);
+  return { ok: true, user };
 }
 
 // ============================================================
@@ -646,39 +653,9 @@ function getWeeklyPlan(body) {
 // ============================================================
 //  REPORTS
 // ============================================================
-function submitReport(caller, body) {
-  if (caller.role !== 'teacher') return { ok:false, error:'Only teachers can submit reports' };
-
-  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(SH.REPORTS);
-  const data  = sheet.getDataRange().getValues();
-
-  // Check if report for this week already exists
-  const existing = data.slice(1).find(r =>
-    r[1] === caller.id && String(r[4]) === String(body.weekNum) && r[2] === body.assignId
-  );
-  if (existing && existing[21] === 'submitted') {
-    return { ok:false, error:'Report for this week already submitted. Contact coordinator to edit.' };
-  }
-
-  const rId = 'RPT' + String(Date.now()).slice(-8);
-  sheet.appendRow([
-    rId, caller.id, body.assignId||'', body.courseId||'', body.deptId||'',
-    body.weekNum, body.classDate||'', body.lessonsFrom||'', body.lessonsTo||'',
-    body.lessonsList||'',
-    body.tajweedTopic||'', body.tajweedStatus||'', body.translationStatus||'',
-    body.surahPracticed||'',
-    body.attendance||'', body.totalStudents||'', body.understandingLevel||'',
-    body.observations||'', body.issues||'', body.suggestions||'',
-    now(), 'pending', '', '', ''
-  ]);
-
-  writeLog(ss, caller.id, caller.username, caller.role, 'Submit Report', `Week ${body.weekNum} report submitted`);
-  return { ok:true, reportId: rId, message:'Report submitted successfully' };
-}
 
 function getReports(caller, body) {
-  if (!['admin','coordinator'].includes(caller.role)) return { ok:false, error:'Forbidden' };
+  if (!['admin','coordinator','teacher'].includes(caller.role)) return { ok:false, error:'Forbidden' };
 
   const ss      = SpreadsheetApp.openById(SPREADSHEET_ID);
   const rSheet  = ss.getSheetByName(SH.REPORTS);
@@ -686,6 +663,7 @@ function getReports(caller, body) {
   const rHeaders= rData[0];
 
   let reports = rData.slice(1).map(r => rowToObj(rHeaders, r));
+  if (caller.role === 'teacher') reports = reports.filter(r => r.LecturerID === caller.id);
 
   if (body.courseId)   reports = reports.filter(r => r.CourseID    === body.courseId);
   if (body.deptId)     reports = reports.filter(r => r.DeptID      === body.deptId);
@@ -984,24 +962,243 @@ function rowToObj(headers, row) {
   return obj;
 }
 
+let _DN = null, _CN = null;
 function getDeptName(ss, deptId) {
   if (!deptId) return '';
-  const sheet = ss.getSheetByName(SH.DEPARTMENTS);
-  const data  = sheet.getDataRange().getValues();
-  const row   = data.slice(1).find(r => r[0] === deptId);
-  return row ? row[1] : deptId;
+  if (!_DN) { _DN = {}; ss.getSheetByName(SH.DEPARTMENTS).getDataRange().getValues().slice(1).forEach(r => _DN[r[0]] = r[1]); }
+  return _DN[deptId] || deptId;
 }
 
 function getCourseName(ss, courseId) {
   if (!courseId) return '';
-  const sheet = ss.getSheetByName(SH.COURSES);
-  const data  = sheet.getDataRange().getValues();
-  const row   = data.slice(1).find(r => r[0] === courseId);
-  return row ? row[1] : courseId;
+  if (!_CN) { _CN = {}; ss.getSheetByName(SH.COURSES).getDataRange().getValues().slice(1).forEach(r => _CN[r[0]] = r[1]); }
+  return _CN[courseId] || courseId;
 }
 
 function writeLog(ss, userId, username, role, action, details) {
+  bumpVer();
   const sheet = ss.getSheetByName(SH.LOGS);
   const logId = 'LOG' + String(Date.now()).slice(-8);
   sheet.appendRow([logId, userId, username, role, action, details, now(), '']);
+}
+
+// ============================================================
+//  V3 ADDITIONS — additive only (no existing data is touched)
+//  1) Run migrateSheets() ONCE (adds new columns at the END of sheets)
+//  2) Project Settings → Script properties → GEMINI_KEY = <your Google AI Studio key>
+//     (optional GEMINI_MODEL, default gemini-2.5-flash)
+// ============================================================
+// AI model fallback chain (fast first). Override with Script Property GEMINI_MODELS (comma separated).
+const AI_MODELS = ['gemini-3-flash-preview','gemini-3.1-flash-lite','gemini-flash-latest','gemini-flash-lite-latest'];
+const NEW_COLS = { REPORTS:['BookUnit','StudentYear','Semester','UpdatedAt'], USERS:['LastSeen'] };
+
+function ensureCols(sheet, cols) {
+  const lc = Math.max(sheet.getLastColumn(), 1);
+  const h  = sheet.getRange(1, 1, 1, lc).getValues()[0];
+  const miss = cols.filter(c => h.indexOf(c) < 0);
+  if (miss.length) {
+    sheet.getRange(1, lc + 1, 1, miss.length).setValues([miss])
+      .setFontWeight('bold').setBackground('#1a2744').setFontColor('#ffffff');
+    return h.concat(miss);
+  }
+  return h;
+}
+function migrateSheets() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  ensureCols(ss.getSheetByName(SH.REPORTS), NEW_COLS.REPORTS);
+  ensureCols(ss.getSheetByName(SH.USERS),   NEW_COLS.USERS);
+  console.log('✅ Migration done — existing data untouched.');
+}
+
+// ── Realtime: version counter + heartbeat ──
+function bumpVer() { try { CacheService.getScriptCache().put('ver', String(Date.now()), 21600); } catch (e) {} }
+function getVer()  { return CacheService.getScriptCache().get('ver') || '0'; }
+
+function syncAction(caller, body) {
+  const c = CacheService.getScriptCache();
+  if (!c.get('hb_' + caller.id)) {
+    c.put('hb_' + caller.id, '1', 50);
+    const sh = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SH.USERS);
+    const h  = ensureCols(sh, NEW_COLS.USERS);
+    const ids = sh.getRange(2, h.indexOf('UserID') + 1, Math.max(sh.getLastRow() - 1, 1), 1).getValues();
+    for (let i = 0; i < ids.length; i++) {
+      if (ids[i][0] === caller.id) { sh.getRange(i + 2, h.indexOf('LastSeen') + 1).setValue(now()); break; }
+    }
+  }
+  const out = { ok: true, ver: getVer() };
+  if (caller.role === 'admin') out.live = getLive();
+  return out;
+}
+
+function getLive() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const d  = ss.getSheetByName(SH.USERS).getDataRange().getValues();
+  const h  = d[0], li = h.indexOf('LastSeen');
+  if (li < 0) return [];
+  const cut = Date.now() - 3 * 60 * 1000, out = [];
+  d.slice(1).forEach(r => {
+    const t = r[li] ? new Date(r[li]).getTime() : 0;
+    if (t > cut && r[h.indexOf('Status')] === 'active') out.push({
+      id: r[h.indexOf('UserID')], name: r[h.indexOf('FullName')], role: r[h.indexOf('Role')],
+      deptName: getDeptName(ss, r[h.indexOf('DepartmentID')]), lastSeen: r[li]
+    });
+  });
+  return out;
+}
+
+// ── Reports: submit / edit (upsert) ──
+function submitReport(caller, body) {
+  if (caller.role !== 'teacher') return { ok:false, error:'Only teachers can submit reports' };
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sh = ss.getSheetByName(SH.REPORTS);
+    const h  = ensureCols(sh, NEW_COLS.REPORTS);
+    const data = sh.getDataRange().getValues();
+    const ix = n => h.indexOf(n);
+    let row = -1;
+    if (body.reportId) {
+      row = data.findIndex((r, i) => i > 0 && r[ix('ReportID')] === body.reportId);
+      if (row < 0) return { ok:false, error:'Report not found' };
+      if (data[row][ix('LecturerID')] !== caller.id) return { ok:false, error:'Forbidden' };
+    } else {
+      row = data.findIndex((r, i) => i > 0 && r[ix('LecturerID')] === caller.id &&
+        String(r[ix('WeekNum')]) === String(body.weekNum) && String(r[ix('CourseID')]) === String(body.courseId || ''));
+    }
+    if (row > 0 && data[row][ix('Status')] === 'approved')
+      return { ok:false, error:'Approved report locked. Coordinator se return karwa ke edit karen.' };
+
+    const rec = {
+      LecturerID:caller.id, AssignID:body.assignId||'', CourseID:body.courseId||'', DeptID:body.deptId||'',
+      WeekNum:body.weekNum, ClassDate:body.classDate||'', LessonsFrom:body.lessonsFrom||'', LessonsTo:body.lessonsTo||'',
+      LessonsList:body.lessonsList||'', TajweedTopic:body.tajweedTopic||'', TajweedStatus:body.tajweedStatus||'',
+      TranslationStatus:body.translationStatus||'', SurahPracticed:body.surahPracticed||'', Attendance:body.attendance||'',
+      TotalStudents:body.totalStudents||'', UnderstandingLevel:body.understandingLevel||'', Observations:body.observations||'',
+      Issues:body.issues||'', Suggestions:body.suggestions||'', BookUnit:body.bookUnit||'', StudentYear:body.studentYear||'',
+      Semester:body.semester||'', UpdatedAt:now(), Status:'pending'
+    };
+    let id;
+    if (row > 0) {
+      id = data[row][ix('ReportID')];
+      const vals = h.map((c, i) => rec[c] !== undefined ? rec[c] : (data[row][i] === undefined ? '' : data[row][i]));
+      sh.getRange(row + 1, 1, 1, h.length).setValues([vals]);
+      writeLog(ss, caller.id, caller.username, caller.role, 'Edit Report', `Week ${body.weekNum} report updated`);
+      return { ok:true, reportId:id, updated:true, message:'Report updated' };
+    }
+    id = 'RPT' + String(Date.now()).slice(-8);
+    rec.ReportID = id; rec.SubmittedAt = now(); rec.CoordRemarks = '';
+    sh.appendRow(h.map(c => rec[c] !== undefined ? rec[c] : ''));
+    writeLog(ss, caller.id, caller.username, caller.role, 'Submit Report', `Week ${body.weekNum} report submitted`);
+    return { ok:true, reportId:id, message:'Report submitted successfully' };
+  } finally { lock.releaseLock(); }
+}
+
+// ── Planned vs Actual ──
+function unitNo(s) { const m = String(s || '').match(/unit\s*(\d+)/i); return m ? +m[1] : 0; }
+
+function getComparison(caller, body) {
+  if (!['admin','coordinator'].includes(caller.role)) return { ok:false, error:'Forbidden' };
+  const ss  = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const rep = getReports(caller, body || {});
+  if (!rep.ok) return rep;
+  const pd = ss.getSheetByName(SH.WEEKLY_PLAN).getDataRange().getValues(), ph = pd[0];
+  const byC = {};
+  pd.slice(1).map(r => rowToObj(ph, r)).forEach(p => { (byC[p.CourseID] = byC[p.CourseID] || []).push(p); });
+  const idx = {};
+  Object.keys(byC).forEach(c => {
+    let n = 0; const m = {};
+    byC[c].sort((a, b) => a.WeekNum - b.WeekNum).forEach(p => {
+      const u = unitNo(p.BookUnit);
+      String(p.LessonsList).split(',').forEach(l => { const k = u + '|' + (+l); if (l !== '' && !(k in m)) m[k] = ++n; });
+    });
+    idx[c] = m;
+  });
+  const pos = (m, u, l) => {
+    if (m[u + '|' + l]) return m[u + '|' + l];
+    let best = null;
+    Object.keys(m).forEach(k => { const [uu, ll] = k.split('|').map(Number); if (uu === u && ll <= l && (best === null || m[k] > best)) best = m[k]; });
+    return best;
+  };
+  const rows = rep.reports.map(r => {
+    const plist = byC[r.CourseID] || [];
+    const p = plist.find(x => +x.WeekNum === +r.WeekNum);
+    const m = idx[r.CourseID] || {};
+    const pu = p ? unitNo(p.BookUnit) : 0;
+    const au = unitNo(r.BookUnit) || pu;
+    const pEnd = p ? pos(m, pu, +p.LessonsTo) : null;
+    const aEnd = r.LessonsTo !== '' ? pos(m, au, +r.LessonsTo) : null;
+    const gap  = (pEnd !== null && aEnd !== null) ? aEnd - pEnd : null;
+    return {
+      ReportID:r.ReportID, LecturerID:r.LecturerID, LecturerName:r.LecturerName, DeptName:r.DeptName, CourseID:r.CourseID,
+      CourseName:r.CourseName, WeekNum:r.WeekNum, Status:r.Status, StudentYear:r.StudentYear||'', Semester:r.Semester||'',
+      Attendance:r.Attendance, TotalStudents:r.TotalStudents, Understanding:r.UnderstandingLevel,
+      planned: p ? { unit:'Unit ' + pu, from:p.LessonsFrom, to:p.LessonsTo, topic:p.TajweedTopic } : null,
+      actual:  { unit: au ? 'Unit ' + au : '—', from:r.LessonsFrom, to:r.LessonsTo, topic:r.TajweedTopic, known: !!unitNo(r.BookUnit) },
+      gap, state: gap === null ? 'unknown' : gap > 0 ? 'ahead' : gap < 0 ? 'behind' : 'ontrack'
+    };
+  });
+  return { ok:true, rows };
+}
+
+// ── Admin AI assistant (Gemini). Key stays in Script Properties, never in the browser ──
+function aiChat(caller, body) {
+  if (caller.role !== 'admin') return { ok:false, error:'Admin only' };
+  const props = PropertiesService.getScriptProperties();
+  const key = props.getProperty('GEMINI_KEY');
+  if (!key) return { ok:false, error:'GEMINI_KEY Script Properties me set nahi hai (Project Settings → Script properties).' };
+  const models = (props.getProperty('GEMINI_MODELS') || AI_MODELS.join(',')).split(',').map(s => s.trim()).filter(Boolean);
+  const cmp = getComparison(caller, {});
+  const tt  = getTimetable(caller, {});
+  const ctx = {
+    today: now().slice(0, 10), week: body.week || '',
+    reports: (cmp.rows || []).slice(-350).map(r => ({
+      t:r.LecturerName, dept:r.DeptName, course:r.CourseName, wk:r.WeekNum, st:r.Status, yr:r.StudentYear, sem:r.Semester,
+      att:r.Attendance, tot:r.TotalStudents, und:r.Understanding,
+      plan: r.planned ? `${r.planned.unit} L${r.planned.from}-${r.planned.to}` : '', act:`${r.actual.unit} L${r.actual.from}-${r.actual.to}`,
+      gap:r.gap, state:r.state })),
+    timetable: ((tt && tt.slots) || []).slice(0, 250).map(s => ({
+      t:s.LecturerName, dept:s.DeptName, course:s.CourseName, sec:s.Section, day:s.Day, mode:s.Mode }))
+  };
+  const SYS = 'You are the analytics assistant for Isra University Fehm-e-Quran portal (admin only). ' +
+    'Answer in the language of the question (Roman Urdu/Urdu/English). Use ONLY the supplied DATA. ' +
+    'Reply as JSON: {"answer":string,"charts":[{"type":"bar|line|pie|doughnut","title":string,"labels":[string],"data":[number],"label":string}],' +
+    '"slides":[{"title":string,"bullets":[string]}]}. Add charts only when useful; add slides only when asked for a presentation/slides/report. ' +
+    'gap = actual lesson position minus planned (positive = ahead, negative = behind).';
+  const hist = (body.history || []).slice(-6).map(m => ({ role: m.role === 'user' ? 'user' : 'model', parts:[{ text:String(m.text).slice(0, 1500) }] }));
+  const payload = {
+    systemInstruction: { parts:[{ text:SYS }] },
+    contents: hist.concat([{ role:'user', parts:[{ text:'DATA:\n' + JSON.stringify(ctx) + '\n\nQUESTION: ' + String(body.message || '').slice(0, 2000) }] }]),
+    generationConfig: { responseMimeType:'application/json', temperature:0.3 }
+  };
+  let lastErr = '';
+  for (const model of models) {
+    let res;
+    try {
+      res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent',
+        { method:'post', contentType:'application/json', headers:{ 'x-goog-api-key': key }, payload:JSON.stringify(payload), muteHttpExceptions:true });
+    } catch (e) { lastErr = model + ': ' + e.message; continue; }
+    const code = res.getResponseCode();
+    let j = {}; try { j = JSON.parse(res.getContentText()); } catch (e) {}
+    const emsg = (j.error && j.error.message) || code;
+    if (code === 401 || code === 403) return { ok:false, error:'API key reject hui: ' + emsg };
+    if (code !== 200) { lastErr = model + ' (' + code + '): ' + emsg; continue; }   // 404/429/5xx → next model
+    const parts = (((j.candidates || [])[0] || {}).content || {}).parts;
+    const txt = parts ? parts.map(p => p.text || '').join('') : '';
+    if (!txt) { lastErr = model + ': empty response'; continue; }
+    let out; try { out = JSON.parse(txt); } catch (e) { out = { answer: txt }; }
+    return { ok:true, answer: out.answer || '', charts: out.charts || [], slides: out.slides || [], model };
+  }
+  return { ok:false, error:'Sab AI models fail hue. Last: ' + lastErr };
+}
+
+// Run once from the editor to check which models/key work (see View → Logs)
+function testAI() {
+  const key = PropertiesService.getScriptProperties().getProperty('GEMINI_KEY');
+  AI_MODELS.forEach(m => {
+    const r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent',
+      { method:'post', contentType:'application/json', headers:{ 'x-goog-api-key': key },
+        payload: JSON.stringify({ contents:[{ parts:[{ text:'Say OK' }] }] }), muteHttpExceptions:true });
+    console.log(m + ' → ' + r.getResponseCode());
+  });
 }
