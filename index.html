@@ -512,7 +512,10 @@ tbody tr{transition:background .12s}
 .mob-menu{display:none;background:none;border:none;font-size:22px;cursor:pointer;
   padding:5px;line-height:1;color:var(--navy)}
 @media(max-width:768px){.mob-menu{display:flex;align-items:center}}
+.live-u{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;border-bottom:1px solid var(--border)}.ai-msg{padding:10px 13px;border-radius:10px;margin:8px 0;font-size:13px;line-height:1.6;max-width:92%}.ai-u{background:var(--navy);color:#fff;margin-left:auto}.ai-b{background:var(--bg);border:1px solid var(--border)}.ai-tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js"></script>
 </head>
 <body>
 
@@ -599,8 +602,10 @@ tbody tr{transition:background .12s}
       </div>
       <div class="sb-sec"><div class="sb-sec-lbl">Monitoring</div>
         <div class="ni" data-panel="admin-reports"><span class="ni-icon">📄</span>All Reports<span class="ni-badge" id="badge-pend">0</span></div>
+        <div class="ni" data-panel="admin-compare"><span class="ni-icon">📈</span>Plan vs Actual</div>
         <div class="ni" data-panel="admin-schedule"><span class="ni-icon">📅</span>Course Schedule</div>
         <div class="ni" data-panel="admin-timetable"><span class="ni-icon">🕐</span>Timetable</div>
+        <div class="ni" data-panel="admin-ai"><span class="ni-icon">🤖</span>AI Assistant</div>
         <div class="ni" data-panel="admin-logs"><span class="ni-icon">🕵️</span>Activity Logs</div>
       </div>
       <div class="sb-sec"><div class="sb-sec-lbl">System</div>
@@ -678,6 +683,7 @@ tbody tr{transition:background .12s}
           <span class="live-cd" id="admin-cd">Next in 60s</span>
           <button class="ref-btn" onclick="manualRefresh('admin')">↻ Refresh</button>
         </div>
+        <div class="card" style="margin-bottom:16px"><div class="card-hd"><div class="card-title">🟢 Live Staff</div><span class="b b-g" id="live-cnt">0 online</span></div><div class="card-bd" id="live-list" style="max-height:220px;overflow:auto"><div style="color:var(--muted);font-size:12px">Loading…</div></div></div>
         <div class="stats-row" id="admin-stats"></div>
         <div class="g2">
           <div class="card">
@@ -784,6 +790,29 @@ tbody tr{transition:background .12s}
       </div>
 
       <!-- ══ ADMIN TIMETABLE ══ -->
+      <div id="panel-admin-compare" class="panel">
+        <div class="sec-hd"><div><div class="sec-title">Planned vs Teacher Report</div><div class="sec-sub">Official 16-week plan ke muqabil teacher ki actual progress</div></div></div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+          <select class="fi" style="width:170px;padding:6px 10px" id="cmp-dept" onchange="loadCompare()"><option value="">All Departments</option></select>
+          <select class="fi" style="width:170px;padding:6px 10px" id="cmp-course" onchange="loadCompare()"><option value="">All Courses</option></select>
+          <select class="fi" style="width:130px;padding:6px 10px" id="cmp-wk" onchange="loadCompare()"><option value="">All Weeks</option></select>
+          <select class="fi" style="width:150px;padding:6px 10px" id="cmp-state" onchange="loadCompare()"><option value="">All Status</option><option value="ahead">Ahead</option><option value="behind">Behind</option><option value="ontrack">On track</option></select>
+        </div>
+        <div class="stats-row" id="cmp-stats"></div>
+        <div class="card"><div class="tw"><table>
+          <thead><tr><th>Teacher</th><th>Wk</th><th>Year / Sem</th><th>Planned</th><th>Teacher Report</th><th>Gap (lessons)</th><th>Status</th></tr></thead>
+          <tbody id="cmp-tbl"><tr><td colspan="7"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
+        </table></div></div>
+      </div>
+
+      <div id="panel-admin-ai" class="panel">
+        <div class="sec-hd"><div><div class="sec-title">🤖 AI Assistant (Admin)</div><div class="sec-sub">Data ka analysis, charts, PDF report aur slides — apne alfaz me poochein</div></div></div>
+        <div class="card"><div class="card-bd">
+          <div id="ai-log" style="min-height:260px;max-height:55vh;overflow:auto"><div class="ai-msg ai-b">Assalam o Alaikum! Misal: "Kaun se teachers plan se pichhe hain? Chart bana do" ya "is hafte ki report ka PDF aur slides banao".</div></div>
+          <div style="display:flex;gap:8px;margin-top:10px"><input class="fi" id="ai-in" placeholder="Sawal likhein…" onkeydown="if(event.key==='Enter')aiSend()"><button class="btn btn-navy" id="ai-btn" onclick="aiSend()">Send</button></div>
+        </div></div>
+      </div>
+
       <div id="panel-admin-timetable" class="panel">
         <div class="sec-hd">
           <div><div class="sec-title">Timetable</div><div class="sec-sub">Department-wise class schedule</div></div>
@@ -795,6 +824,7 @@ tbody tr{transition:background .12s}
           <select class="fi" style="width:130px;padding:6px 10px" id="ttf-day" onchange="loadAdminTT()"><option value="">All Days</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option></select>
           <select class="fi" style="width:140px;padding:6px 10px" id="ttf-mode" onchange="loadAdminTT()"><option value="">All Modes</option><option value="Physical">Physical</option><option value="Online">Online</option></select>
         </div>
+        <div class="card" id="tt-by" style="margin-bottom:16px"></div>
         <div class="card" style="margin-bottom:16px">
           <div class="card-hd"><div class="card-title">Weekly Grid</div><span class="b b-gold" id="tt-count">0 slots</span></div>
           <div style="overflow-x:auto"><div id="tt-grid"></div></div>
@@ -972,7 +1002,7 @@ tbody tr{transition:background .12s}
                   </div>
                   <div class="fg">
                     <label>Course *</label>
-                    <select id="rpt-course">
+                    <select id="rpt-course" onchange="selWeek(+document.getElementById('rpt-wk').value||CW)">
                       <option value="">— Select Course —</option>
                     </select>
                   </div>
@@ -984,7 +1014,8 @@ tbody tr{transition:background .12s}
               <div class="card-hd"><div class="card-title">② Lessons Covered</div><span class="b b-gold" id="plan-badge">Select week first</span></div>
               <div class="card-bd">
                 <div style="background:var(--bg);border-radius:7px;padding:10px;margin-bottom:12px" id="plan-ref"><p style="font-size:12px;color:var(--muted)">Select a week above to see the plan.</p></div>
-                <div class="fg" style="margin-bottom:10px"><label>Unit / Book</label><input type="text" id="rpt-unit" readonly style="background:var(--bg)"></div>
+                <div class="fg-grid c2" style="margin-bottom:10px"><div class="fg"><label>Student Year</label><select id="rpt-year"><option value="">Select</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option></select></div><div class="fg"><label>Semester</label><select id="rpt-sem"><option value="">Select</option><option>Semester 1</option><option>Semester 2</option><option>Semester 3</option><option>Semester 4</option><option>Semester 5</option><option>Semester 6</option><option>Semester 7</option><option>Semester 8</option></select></div></div>
+                <div class="fg" style="margin-bottom:10px"><label>Unit (jo actually parhaya)</label><select id="rpt-unit" onchange="onUnitChange()"></select></div>
                 <p style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">Select completed lessons:</p>
                 <div class="lp-wrap" id="lp-wrap"></div>
                 <div class="fg-grid c3" style="margin-top:12px">
@@ -1352,10 +1383,10 @@ const D_LOGS = [
 // ════════════════════════════════════════════════════════════
 //  API — calls GAS or falls back to demo
 // ════════════════════════════════════════════════════════════
-async function api(payload) {
+async function apiRaw(payload) {
   if (!GAS_URL) return demo(payload);
   try {
-    showLoader(true);
+    if(payload.action!=='sync')showLoader(true);
     const body = 'data=' + encodeURIComponent(JSON.stringify({...payload, token: SESSION?.token||''}));
     const res  = await fetch(GAS_URL, {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body});
     const text = await res.text();
@@ -1370,8 +1401,8 @@ async function api(payload) {
     }
   } catch(e) {
     showLoader(false);
-    console.warn('GAS fetch failed, using demo:', e.message);
-    return demo(payload);
+    console.warn('GAS fetch failed:', e.message);
+    return {ok:false,error:'Network error — internet check karen, data save nahi hua'};
   }
 }
 
@@ -1572,6 +1603,7 @@ function bootApp() {
     };
   });
 
+  startSync();
   // Load global data then show default panel
   Promise.all([loadDepts(), loadCourses()]).then(() => {
     const defaults={admin:'admin-dash',coordinator:'coord-dash',teacher:'t-dash'};
@@ -1585,7 +1617,7 @@ function bootApp() {
 const PANEL_TITLES = {
   'admin-dash':'Dashboard','admin-depts':'Departments','admin-users':'Manage Users',
   'admin-courses':'Courses','admin-reports':'All Reports','admin-schedule':'Course Schedule',
-  'admin-timetable':'Timetable','admin-logs':'Activity Logs','admin-settings':'Settings',
+  'admin-timetable':'Timetable','admin-compare':'Plan vs Actual','admin-ai':'AI Assistant','admin-logs':'Activity Logs','admin-settings':'Settings',
   'coord-dash':'Dashboard','coord-teachers':'My Lecturers','coord-reports':'Review Reports',
   'coord-timetable':'Timetable','coord-summary':'Weekly Summary',
   't-dash':'My Dashboard','t-submit':'Submit Report','t-history':'My Reports',
@@ -1599,6 +1631,8 @@ const PANEL_LOADERS = {
   'admin-reports':   loadReports,
   'admin-schedule':  () => loadSchedule('CRS001'),
   'admin-timetable': loadAdminTT,
+  'admin-compare':   loadCompare,
+  'admin-ai':        ()=>{},
   'admin-logs':      loadLogs,
   'admin-settings':  () => { const el=document.getElementById('set-gas'); if(el&&GAS_URL)el.value=GAS_URL; },
   'coord-dash':      loadCoordDash,
@@ -1614,6 +1648,7 @@ const PANEL_LOADERS = {
 };
 
 function showPanel(id) {
+  CUR=id; if(id==='admin-dash')setTimeout(doSync,300);
   // stop auto-refresh for panels we're leaving
   ['admin','coord','t'].forEach(r => { if(id !== r+'-dash') stopAR(r); });
   // show panel
@@ -1909,7 +1944,7 @@ async function loadReports(){
     <td><strong>Wk ${rp.WeekNum}</strong></td>
     <td style="font-size:12px">${rp.ClassDate||'—'}</td>
     <td style="font-family:monospace;font-size:12px">${rp.LessonsFrom}–${rp.LessonsTo}</td>
-    <td><span class="b ${sm[rp.Status]||'b-n'}">${rp.Status}</span></td>
+    <td><span class="b ${sm[rp.Status]||'b-n'}">${rp.Status}</span>${rp.Status!=='approved'?` <button class="btn btn-out btn-sm" onclick="editMyReport('${esc(rp.ReportID)}')">✏️ Edit</button>`:''}</td>
     <td style="font-size:11px;color:var(--muted)">${(rp.SubmittedAt||'').slice(0,10)}</td>
     <td><button class="btn btn-out btn-xs" onclick='viewReport(${JSON.stringify(rp).replace(/'/g,"&#39;")})'>View</button></td>
   </tr>`).join(''):'<tr><td colspan="9"><div class="empty"><div class="ei">📄</div><h3>No reports</h3></div></td></tr>';
@@ -2141,6 +2176,7 @@ async function loadTeacherDash(){
 //  TEACHER SUBMIT
 // ════════════════════════════════════════════════════════════
 async function initSubmitForm(){
+  if(!EDIT_PENDING)EDIT_ID='';
   const u=SESSION.user;
   document.getElementById('sub-sub').textContent=(u.courseName||'Course')+' · '+(u.section||'—');
   document.getElementById('prev-name').textContent=u.name;
@@ -2165,6 +2201,7 @@ async function initSubmitForm(){
     return `<div class="wk-cell ${cls}" id="wkc-${w}" onclick="selWeek(${w})"><div class="wk-num">${w}</div><div class="wk-lbl">Week ${w}</div><div class="wk-ck">${done?'✅':cur?'📝':''}</div></div>`;
   }).join('');
   selWeek(CW);
+  if(EDIT_PENDING){const e=EDIT_PENDING;EDIT_PENDING=null;applyEdit(e);}
 }
 function selWeek(w){
   document.querySelectorAll('.wk-cell').forEach(c=>c.classList.remove('wc-sel'));
@@ -2172,10 +2209,10 @@ function selWeek(w){
   document.getElementById('rpt-wk').value=w;
   document.getElementById('prev-wk').textContent='Week '+w;
   const u=SESSION.user;
-  const plan=u.courseId==='CRS002'?PLAN2:PLAN1;
+  const plan=curPlan();
   const p=plan.find(x=>x.wk===w);
   if(p){
-    document.getElementById('rpt-unit').value=p.unit;
+    fillUnits();document.getElementById('rpt-unit').value=unitNo(p.unit);
     document.getElementById('rpt-from').value=p.from;
     document.getElementById('rpt-to').value=p.to;
     document.getElementById('rpt-taj-topic').value=p.taj;
@@ -2237,9 +2274,9 @@ async function submitReport(){
   btn.innerHTML='<div class="spin"></div> Submitting…';btn.disabled=true;
   const selDeptId   = document.getElementById('rpt-dept')?.value  || u.deptId   || '';
   const selCourseId = document.getElementById('rpt-course')?.value || u.courseId || 'CRS001';
-  const r=await api({action:'submitReport',courseId:selCourseId,deptId:selDeptId,weekNum:parseInt(wk),classDate:document.getElementById('rpt-date').value,lessonsFrom:document.getElementById('rpt-from').value,lessonsTo:document.getElementById('rpt-to').value,lessonsList:sel,tajweedTopic:document.getElementById('rpt-taj-topic').value,tajweedStatus:document.getElementById('rpt-taj-status').value,translationStatus:document.getElementById('rpt-trans').value,surahPracticed:document.getElementById('rpt-surah').value,attendance:document.getElementById('rpt-att').value,totalStudents:document.getElementById('rpt-tot').value,understandingLevel:document.getElementById('rpt-und').value,observations:document.getElementById('rpt-obs').value,issues:document.getElementById('rpt-issues').value,suggestions:document.getElementById('rpt-sug').value});
+  const r=await api({action:'submitReport',courseId:selCourseId,deptId:selDeptId,weekNum:parseInt(wk),classDate:document.getElementById('rpt-date').value,lessonsFrom:document.getElementById('rpt-from').value,lessonsTo:document.getElementById('rpt-to').value,lessonsList:sel,tajweedTopic:document.getElementById('rpt-taj-topic').value,tajweedStatus:document.getElementById('rpt-taj-status').value,translationStatus:document.getElementById('rpt-trans').value,surahPracticed:document.getElementById('rpt-surah').value,attendance:document.getElementById('rpt-att').value,totalStudents:document.getElementById('rpt-tot').value,understandingLevel:document.getElementById('rpt-und').value,observations:document.getElementById('rpt-obs').value,issues:document.getElementById('rpt-issues').value,suggestions:document.getElementById('rpt-sug').value,bookUnit:'Unit '+document.getElementById('rpt-unit').value,studentYear:document.getElementById('rpt-year').value,semester:document.getElementById('rpt-sem').value,reportId:EDIT_ID});
   btn.innerHTML='✅ Submit Report';btn.disabled=false;
-  if(r.ok){toast('Report submitted!','ok');showPanel('t-history');}
+  if(r.ok){toast(EDIT_ID?'Report updated!':'Report submitted!','ok');EDIT_ID='';btn.innerHTML='✅ Submit Report';showPanel('t-history');}
   else toast(r.error||'Submit failed','err');
 }
 
@@ -2248,10 +2285,11 @@ async function submitReport(){
 // ════════════════════════════════════════════════════════════
 async function loadMyHistory(){
   const r=await api({action:'getReports',lecturerId:SESSION.user.id}); if(!r.ok)return;
+  MYRPT=r.reports||[];
   const sm={approved:'b-g',pending:'b-y',rejected:'b-r'};
   document.getElementById('t-hist-tbl').innerHTML=(r.reports||[]).sort((a,b)=>b.WeekNum-a.WeekNum).length?(r.reports).map(rp=>`<tr>
     <td><strong>Wk ${rp.WeekNum}</strong></td><td style="font-size:12px">${rp.ClassDate||'—'}</td>
-    <td style="font-size:12px">${rp.LessonsFrom||'—'}</td>
+    <td style="font-size:12px">${esc(rp.BookUnit||'—')}</td>
     <td style="font-family:monospace;font-size:12px">${rp.LessonsFrom}–${rp.LessonsTo}</td>
     <td style="font-size:12px">${rp.TajweedStatus||'—'}</td>
     <td style="font-size:12px">${rp.Attendance||'—'}/${rp.TotalStudents||'—'}</td>
@@ -2308,6 +2346,7 @@ async function loadAdminTT(){
   document.getElementById('tt-count').textContent=slots.length+' slots';
   renderTTGrid(slots,'tt-grid');
   renderTTList(slots,'tt-list',true);
+  renderTTBy(slots);
 }
 async function loadCoordTT(){
   const day=document.getElementById('cttf-day')?.value||'';
@@ -2670,6 +2709,130 @@ document.addEventListener('DOMContentLoaded',()=>{
 // Save session on login
 const _origBootApp=bootApp;
 window.bootApp=function(){localStorage.setItem('session',JSON.stringify(SESSION));_origBootApp();};
+
+// ════════════════════════════════════════════════════════════
+//  V3 — cache, realtime sync, plan-vs-actual, live staff, AI
+// ════════════════════════════════════════════════════════════
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let RC={},INF={},LASTVER=null,SYNCT=null,CUR='',EDIT_ID='',EDIT_PENDING=null,MYRPT=[],AIH=[],AIR=[];
+const RO=new Set(['getDepartments','getCourses','getUsers','getReports','getDashboardStats','getTimetable','getWeeklyPlan','getLogs','getComparison']);
+async function api(p){
+  if(!RO.has(p.action)){const r=await apiRaw(p);RC={};return r;}
+  const k=JSON.stringify(p),h=RC[k];
+  if(h&&Date.now()-h.t<20000)return h.r;
+  if(INF[k])return INF[k];
+  INF[k]=apiRaw(p).then(r=>{if(r&&r.ok)RC[k]={t:Date.now(),r};delete INF[k];return r;});
+  return INF[k];
+}
+function startSync(){clearInterval(SYNCT);if(!GAS_URL)return;SYNCT=setInterval(doSync,15000);doSync();}
+async function doSync(){
+  if(!SESSION||!GAS_URL||document.hidden)return;
+  const r=await apiRaw({action:'sync'});if(!r||!r.ok)return;
+  if(r.live)renderLive(r.live);
+  if(LASTVER!==null&&r.ver!==LASTVER){
+    RC={};const a=document.activeElement,typing=a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName);
+    if(CUR&&CUR!=='t-submit'&&CUR!=='admin-ai'&&!typing&&PANEL_LOADERS[CUR])PANEL_LOADERS[CUR]();
+  }
+  LASTVER=r.ver;
+}
+function renderLive(l){
+  const el=document.getElementById('live-list');if(!el)return;
+  document.getElementById('live-cnt').textContent=l.length+' online';
+  el.innerHTML=l.length?l.map(u=>`<div class="live-u"><span class="live-dot"></span><b>${esc(u.name)}</b><span class="b b-n">${esc(u.role)}</span><span style="color:var(--muted);font-size:11px">${esc(u.deptName||'')}</span></div>`).join(''):'<div style="color:var(--muted);font-size:12px">Is waqt koi live nahi</div>';
+}
+// ── Teacher report: free unit/week + edit ──
+function unitNo(s){const m=String(s||'').match(/unit\s*(\d+)/i);return m?+m[1]:0;}
+function curPlan(){const c=document.getElementById('rpt-course')?.value||SESSION.user.courseId;return c==='CRS002'?PLAN2:PLAN1;}
+function fillUnits(){
+  const s=document.getElementById('rpt-unit'),m={};
+  curPlan().forEach(p=>{const u=unitNo(p.unit);m[u]=Math.max(m[u]||0,p.to);});
+  const cur=s.value;
+  s.innerHTML=Object.keys(m).map(u=>`<option value="${u}" data-max="${m[u]}">Unit ${u} (L1–${m[u]})</option>`).join('');
+  if(cur&&m[cur])s.value=cur;
+}
+function onUnitChange(){
+  const o=document.getElementById('rpt-unit').selectedOptions[0];if(!o)return;
+  buildLessonPicker(Array.from({length:+o.dataset.max},(_,i)=>i+1));
+  document.querySelectorAll('.lp-btn').forEach(x=>x.classList.remove('lp-sel'));
+  ['rpt-from','rpt-to','rpt-cnt'].forEach(id=>document.getElementById(id).value='');
+}
+function editMyReport(id){EDIT_PENDING=MYRPT.find(r=>r.ReportID===id);if(EDIT_PENDING)showPanel('t-submit');}
+function applyEdit(rp){
+  EDIT_ID=rp.ReportID;const g=id=>document.getElementById(id),set=(id,v)=>{const e=g(id);if(e&&v!=null)e.value=v;};
+  set('rpt-dept',rp.DeptID);onRptDeptChange();set('rpt-course',rp.CourseID);
+  selWeek(+rp.WeekNum);fillUnits();
+  const un=unitNo(rp.BookUnit);
+  if(un){set('rpt-unit',un);const o=g('rpt-unit').selectedOptions[0];if(o)buildLessonPicker(Array.from({length:+o.dataset.max},(_,i)=>i+1));}
+  const ls=String(rp.LessonsList||'').split(',').filter(Boolean).map(Number);
+  document.querySelectorAll('.lp-btn').forEach(b=>b.classList.toggle('lp-sel',ls.includes(+b.dataset.l)));
+  set('rpt-from',rp.LessonsFrom);set('rpt-to',rp.LessonsTo);set('rpt-cnt',ls.length||'');
+  set('rpt-date',String(rp.ClassDate||'').slice(0,10));set('rpt-year',rp.StudentYear);set('rpt-sem',rp.Semester);
+  set('rpt-taj-topic',rp.TajweedTopic);set('rpt-taj-status',rp.TajweedStatus);set('rpt-trans',rp.TranslationStatus);set('rpt-surah',rp.SurahPracticed);
+  set('rpt-att',rp.Attendance);set('rpt-tot',rp.TotalStudents);set('rpt-und',rp.UnderstandingLevel);
+  set('rpt-obs',rp.Observations);set('rpt-issues',rp.Issues);set('rpt-sug',rp.Suggestions);
+  g('sub-btn').innerHTML='💾 Update Report';toast('Edit mode — changes save karke Update dabayen','warn');
+}
+// ── Admin: plan vs actual ──
+async function loadCompare(){
+  const v=id=>document.getElementById(id).value;
+  const ds=document.getElementById('cmp-dept'),cs=document.getElementById('cmp-course'),ws=document.getElementById('cmp-wk');
+  if(ds.options.length<=1)DEPTS.forEach(d=>ds.add(new Option(d.DeptName,d.DeptID)));
+  if(cs.options.length<=1)COURSES.forEach(c=>cs.add(new Option(c.CourseName,c.CourseID)));
+  if(ws.options.length<=1)for(let i=1;i<=16;i++)ws.add(new Option('Week '+i,i));
+  const r=await api({action:'getComparison',deptId:v('cmp-dept'),courseId:v('cmp-course'),weekNum:v('cmp-wk')});
+  if(!r.ok){toast(r.error||'Load failed','err');return;}
+  let rows=(r.rows||[]).sort((a,b)=>b.WeekNum-a.WeekNum);
+  const c={ahead:0,behind:0,ontrack:0};rows.forEach(x=>{if(c[x.state]!==undefined)c[x.state]++;});
+  document.getElementById('cmp-stats').innerHTML=[['📈','Ahead',c.ahead],['📉','Behind',c.behind],['✅','On track',c.ontrack],['📄','Reports',rows.length]].map(s=>`<div class="sc"><div class="sc-icon">${s[0]}</div><div class="sc-lbl">${s[1]}</div><div class="sc-val">${s[2]}</div></div>`).join('');
+  const st=v('cmp-state');if(st)rows=rows.filter(x=>x.state===st);
+  const bd={ahead:'b-gold',behind:'b-r',ontrack:'b-g',unknown:'b-n'};
+  document.getElementById('cmp-tbl').innerHTML=rows.length?rows.map(x=>{
+    const p=x.planned,a=x.actual,w=Math.min(Math.abs(x.gap||0)*8,100);
+    return `<tr><td><strong>${esc(x.LecturerName)}</strong><div style="font-size:11px;color:var(--muted)">${esc(x.CourseName)}</div></td><td>Wk ${esc(x.WeekNum)}</td><td style="font-size:12px">${esc(x.StudentYear||'—')}<br>${esc(x.Semester||'')}</td>
+    <td style="font-size:12px">${p?esc(p.unit)+' · L'+esc(p.from)+'–'+esc(p.to)+'<div style="color:var(--muted)">'+esc(p.topic)+'</div>':'—'}</td>
+    <td style="font-size:12px">${esc(a.unit)} · L${esc(a.from)}–${esc(a.to)}${a.known?'':' <span style="color:var(--muted)">(unit assumed)</span>'}<div style="color:var(--muted)">${esc(a.topic||'')}</div></td>
+    <td style="min-width:90px"><b>${x.gap===null?'—':(x.gap>0?'+':'')+x.gap}</b><div style="height:5px;background:var(--border);border-radius:3px;margin-top:4px"><div style="height:5px;width:${w}%;border-radius:3px;background:${x.gap>0?'var(--gold)':'var(--red)'}"></div></div></td>
+    <td><span class="b ${bd[x.state]}">${x.state}</span></td></tr>`;}).join(''):'<tr><td colspan="7"><div class="empty"><div class="ei">📈</div><h3>Koi report nahi</h3></div></td></tr>';
+}
+// ── Admin: timetable department → teacher ──
+function renderTTBy(slots){
+  const el=document.getElementById('tt-by');if(!el)return;const g={};
+  slots.forEach(s=>{const d=s.DeptName||'—',t=s.LecturerName||'—';((g[d]=g[d]||{})[t]=g[d][t]||[]).push(s);});
+  el.innerHTML='<div class="card-hd"><div class="card-title">Department → Teacher wise</div></div><div class="card-bd">'+Object.keys(g).sort().map(d=>`<div style="margin-bottom:12px"><div style="font-weight:700;color:var(--navy)">🏛️ ${esc(d)}</div>`+Object.keys(g[d]).sort().map(t=>`<div style="margin:6px 0 0 12px"><b>${esc(t)}</b> <span class="b b-n">${g[d][t].length} slots</span><div style="font-size:12px;color:var(--muted)">`+g[d][t].map(s=>`${esc(s.Day)} ${esc(s.StartTime)}–${esc(s.EndTime)} · ${esc(s.CourseName)} ${esc(s.Section)}`).join(' &nbsp;|&nbsp; ')+'</div></div>').join('')+'</div>').join('')+'</div>';
+}
+// ── Admin: AI assistant ──
+function aiAdd(cls,html){const l=document.getElementById('ai-log'),d=document.createElement('div');d.className='ai-msg '+cls;d.innerHTML=html;l.appendChild(d);l.scrollTop=l.scrollHeight;return d;}
+async function aiSend(){
+  const i=document.getElementById('ai-in'),m=i.value.trim();if(!m)return;i.value='';
+  const b=document.getElementById('ai-btn');b.disabled=true;
+  aiAdd('ai-u',esc(m));const t=aiAdd('ai-b','<div class="spin spin-d"></div> Soch raha hon…');
+  const r=await apiRaw({action:'aiChat',message:m,history:AIH.slice(-6),week:CW});b.disabled=false;
+  if(!r.ok){t.innerHTML='❌ '+esc(r.error||'Error');return;}
+  AIH.push({role:'user',text:m},{role:'model',text:r.answer||''});
+  const idx=AIR.length;AIR.push({answer:r.answer||'',slides:r.slides||[],canvases:[]});
+  t.innerHTML=esc(r.answer).replace(/\n/g,'<br>')+'<div id="aic-'+idx+'"></div>'+(r.model?'<div style="font-size:10px;color:var(--muted);margin-top:6px">Model: '+esc(r.model)+'</div>':'');
+  (r.charts||[]).forEach((c,j)=>{
+    const cv=document.createElement('canvas');cv.style.maxHeight='280px';cv.style.margin='10px 0';document.getElementById('aic-'+idx).appendChild(cv);
+    try{new Chart(cv,{type:c.type||'bar',data:{labels:c.labels||[],datasets:[{label:c.label||c.title||'',data:c.data||[],backgroundColor:['#1a2744','#c9a84c','#16a34a','#dc2626','#2563eb','#9333ea','#ea580c','#0891b2']}]},options:{animation:false,plugins:{title:{display:!!c.title,text:c.title}}},plugins:[{id:'bg',beforeDraw(ch){const x=ch.ctx;x.save();x.globalCompositeOperation='destination-over';x.fillStyle='#fff';x.fillRect(0,0,ch.width,ch.height);x.restore();}}]});AIR[idx].canvases.push(cv);}catch(e){}
+  });
+  const n=AIR[idx].canvases.length;
+  t.insertAdjacentHTML('beforeend','<div class="ai-tools">'+(n?`<button class="btn btn-out btn-sm" onclick="aiImg(${idx})">🖼️ Image${n>1?'s':''}</button>`:'')+`<button class="btn btn-out btn-sm" onclick="aiPdf(${idx})">📄 PDF</button><button class="btn btn-out btn-sm" onclick="aiSlides(${idx})">📊 Slides</button></div>`);
+}
+function aiImg(i){AIR[i].canvases.forEach((c,j)=>{const a=document.createElement('a');a.href=c.toDataURL('image/png');a.download='chart-'+(j+1)+'.png';a.click();});}
+function aiPdf(i){
+  const r=AIR[i],w=window.open('','_blank');if(!w){toast('Popup allow karen','warn');return;}
+  w.document.write(`<html><head><title>Isra University — FEQ Report</title><style>body{font-family:Arial,sans-serif;padding:28px;color:#1a2744;line-height:1.6}img{max-width:100%;margin:12px 0}h1{border-bottom:3px solid #c9a84c;padding-bottom:8px}</style></head><body><img src="${LOGO_B64}" style="height:56px;margin:0"><h1>Isra University — Fehm-e-Quran Report</h1><p style="color:#666">${new Date().toLocaleDateString()}</p><p>${esc(r.answer).replace(/\n/g,'<br>')}</p>${r.canvases.map(c=>'<img src="'+c.toDataURL('image/png')+'">').join('')}${r.slides.map(s=>'<h3>'+esc(s.title)+'</h3><ul>'+(s.bullets||[]).map(b=>'<li>'+esc(b)+'</li>').join('')+'</ul>').join('')}</body></html>`);
+  w.document.close();setTimeout(()=>w.print(),500);
+}
+function aiSlides(i){
+  if(typeof PptxGenJS==='undefined'){toast('Slides library load nahi hui','err');return;}
+  const r=AIR[i],p=new PptxGenJS();let s=p.addSlide();
+  s.addText('Isra University — Fehm-e-Quran',{x:.5,y:2,w:9,h:1,fontSize:32,bold:true,color:'1a2744'});s.addText(new Date().toLocaleDateString(),{x:.5,y:3.1,w:9,h:.5,fontSize:16,color:'666666'});
+  const sl=r.slides.length?r.slides:[{title:'Summary',bullets:String(r.answer).split(/\n+/).filter(Boolean).slice(0,8)}];
+  sl.forEach(x=>{s=p.addSlide();s.addText(x.title||'',{x:.5,y:.3,w:9,h:.8,fontSize:26,bold:true,color:'1a2744'});s.addText((x.bullets||[]).map(b=>({text:b,options:{bullet:true,breakLine:true}})),{x:.6,y:1.3,w:8.8,h:4,fontSize:18,valign:'top'});});
+  r.canvases.forEach(c=>{s=p.addSlide();s.addImage({data:c.toDataURL('image/png'),x:1,y:1,w:8,h:4.4});});
+  p.writeFile({fileName:'Isra-FEQ-Report.pptx'});
+}
 </script>
 </body>
 </html>
