@@ -832,7 +832,7 @@ tbody tr{transition:background .12s}
           <tbody id="hrs-sum-tbl"><tr><td colspan="4"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
         </table></div></div>
         <div class="card"><div class="card-hd"><div class="card-title">Class Details</div></div><div class="tw"><table>
-          <thead><tr><th>Date</th><th>Lecturer</th><th>Time</th><th>Hours</th><th>Department</th><th>Course</th><th>Year / Semester</th><th>Topic</th></tr></thead>
+          <thead><tr><th>Date</th><th>Lecturer</th><th>Time</th><th>Hours</th><th>Department</th><th>Course</th><th>Location / Block</th><th>Year / Semester</th><th>Topic</th></tr></thead>
           <tbody id="hrs-det-tbl"></tbody>
         </table></div></div>
       </div>
@@ -1140,7 +1140,7 @@ tbody tr{transition:background .12s}
                   <div class="fg"><label>Year *</label><select id="cl-year"><option value="">Select year</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option></select></div>
                   <div class="fg"><label>Semester *</label><select id="cl-sem"><option value="">Select semester</option><option>Semester 1</option><option>Semester 2</option><option>Semester 3</option><option>Semester 4</option><option>Semester 5</option><option>Semester 6</option><option>Semester 7</option><option>Semester 8</option></select></div>
                 </div>
-                <div class="fg"><label>Section</label><input type="text" id="cl-sec" placeholder="e.g. Section A"></div>
+                <div class="fg"><label>Location / Block</label><input type="text" id="cl-sec" placeholder="e.g. Block A, Room 12"></div>
                 <div class="fg"><label>Topic</label><input type="text" id="cl-topic" placeholder="e.g. Unit 3, Lessons 4–6"></div>
                 <div class="fg"><label>Notes</label><textarea id="cl-notes" style="min-height:56px"></textarea></div>
               </div>
@@ -1156,8 +1156,8 @@ tbody tr{transition:background .12s}
             </div>
             <div class="stats-row" id="cl-stats"></div>
             <div class="card"><div class="tw"><table>
-              <thead><tr><th>Date</th><th>Time</th><th>Hours</th><th>Department</th><th>Course</th><th>Year / Semester</th><th>Topic</th><th>Actions</th></tr></thead>
-              <tbody id="cl-tbl"><tr><td colspan="8"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
+              <thead><tr><th>Date</th><th>Time</th><th>Hours</th><th>Department</th><th>Course</th><th>Location / Block</th><th>Year / Semester</th><th>Topic</th><th>Actions</th></tr></thead>
+              <tbody id="cl-tbl"><tr><td colspan="9"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
             </table></div></div>
           </div>
         </div>
@@ -1460,6 +1460,7 @@ async function apiRaw(payload) {
     try {
       const data = JSON.parse(text);
       if (!data.ok && data.error === 'Unauthorized') { doLogout(); return {ok:false,error:'Session expired'}; }
+      if (!data.ok && /^Unknown action/.test(data.error||'')) data.error='The server is running an older version. Please deploy the latest Apps Script (Deploy → Manage deployments → New version).';
       return data;
     } catch {
       console.error('GAS non-JSON:', text.slice(0,200));
@@ -2009,10 +2010,10 @@ async function loadReports(){
     <td style="font-size:12px">${rp.DeptName||'—'}</td>
     <td><span class="b b-gold" style="font-size:10.5px">${rp.CourseName||'—'}</span></td>
     <td><strong>Wk ${rp.WeekNum}</strong></td>
-    <td style="font-size:12px">${rp.ClassDate||'—'}</td>
+    <td style="font-size:12px">${fmtD(rp.ClassDate)}</td>
     <td style="font-family:monospace;font-size:12px">${rp.LessonsFrom}–${rp.LessonsTo}</td>
     <td><span class="b ${sm[rp.Status]||'b-n'}">${rp.Status}</span>${rp.Status!=='approved'?` <button class="btn btn-out btn-sm" onclick="editMyReport('${esc(rp.ReportID)}')">✏️ Edit</button>`:''}</td>
-    <td style="font-size:11px;color:var(--muted)">${(rp.SubmittedAt||'').slice(0,10)}</td>
+    <td style="font-size:11px;color:var(--muted)">${fmtD(rp.SubmittedAt)}</td>
     <td><button class="btn btn-out btn-xs" onclick='viewReport(${JSON.stringify(rp).replace(/'/g,"&#39;")})'>View</button></td>
   </tr>`).join(''):'<tr><td colspan="9"><div class="empty"><div class="ei">📄</div><h3>No reports</h3></div></td></tr>';
 }
@@ -2020,7 +2021,7 @@ function viewReport(r){
   document.getElementById('mrpt-body').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:14px">
       <div style="background:var(--bg);border-radius:7px;padding:11px"><div style="font-size:10px;color:var(--muted);font-weight:700">LECTURER</div><div style="font-weight:700;font-size:14px;margin-top:3px">${r.LecturerName||'—'}</div></div>
-      <div style="background:var(--bg);border-radius:7px;padding:11px"><div style="font-size:10px;color:var(--muted);font-weight:700">WEEK / DATE</div><div style="font-weight:700;font-size:14px;margin-top:3px">Week ${r.WeekNum} · ${r.ClassDate||'—'}</div></div>
+      <div style="background:var(--bg);border-radius:7px;padding:11px"><div style="font-size:10px;color:var(--muted);font-weight:700">WEEK / DATE</div><div style="font-weight:700;font-size:14px;margin-top:3px">Week ${r.WeekNum} · ${fmtD(r.ClassDate)}</div></div>
       <div style="background:var(--bg);border-radius:7px;padding:11px"><div style="font-size:10px;color:var(--muted);font-weight:700">COURSE</div><div style="font-weight:600;font-size:13px;margin-top:3px">${r.CourseName||'—'}</div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:14px">
@@ -2069,7 +2070,7 @@ async function loadLogs(){
   const r=await api({action:'getLogs'}); if(!r.ok)return;
   const rc={admin:'b-r',teacher:'b-gold',coordinator:'b-b'};
   document.getElementById('logs-tbl').innerHTML=(r.logs||[]).length?r.logs.map(l=>`<tr>
-    <td style="font-size:11px;color:var(--muted);font-family:monospace">${l.Timestamp||'—'}</td>
+    <td style="font-size:11px;color:var(--muted);font-family:monospace">${fmtDT(l.Timestamp)}</td>
     <td><strong>${l.Username||'—'}</strong></td>
     <td><span class="b ${rc[l.Role]||'b-n'}">${l.Role||'—'}</span></td>
     <td>${l.Action||'—'}</td>
@@ -2165,7 +2166,7 @@ async function loadCoordReports(){
   const sm={pending:'b-y',approved:'b-g',rejected:'b-r'};
   document.getElementById('coord-rpt-tbl').innerHTML=(r.reports||[]).length?r.reports.map(rp=>`<tr>
     <td><strong>${rp.LecturerName||'—'}</strong></td><td><strong>Wk ${rp.WeekNum}</strong></td>
-    <td style="font-size:12px">${rp.ClassDate||'—'}</td>
+    <td style="font-size:12px">${fmtD(rp.ClassDate)}</td>
     <td style="font-family:monospace;font-size:12px">${rp.LessonsFrom}–${rp.LessonsTo}</td>
     <td style="font-size:12px">${rp.Attendance||'—'}/${rp.TotalStudents||'—'}</td>
     <td><span class="b ${sm[rp.Status]||'b-n'}">${rp.Status}</span></td>
@@ -2354,7 +2355,7 @@ async function loadMyHistory(){
   MYRPT=r.reports||[];
   const sm={approved:'b-g',pending:'b-y',rejected:'b-r'};
   document.getElementById('t-hist-tbl').innerHTML=(r.reports||[]).sort((a,b)=>b.WeekNum-a.WeekNum).length?(r.reports).map(rp=>`<tr>
-    <td><strong>Wk ${rp.WeekNum}</strong></td><td style="font-size:12px">${rp.ClassDate||'—'}</td>
+    <td><strong>Wk ${rp.WeekNum}</strong></td><td style="font-size:12px">${fmtD(rp.ClassDate)}</td>
     <td style="font-size:12px">${esc(rp.BookUnit||'—')}</td>
     <td style="font-family:monospace;font-size:12px">${rp.LessonsFrom}–${rp.LessonsTo}</td>
     <td style="font-size:12px">${rp.TajweedStatus||'—'}</td>
@@ -2421,7 +2422,7 @@ async function loadCoordTT(){
   document.getElementById('coord-tt-tbl').innerHTML=(r.slots||[]).sort((a,b)=>DAYS.indexOf(a.Day)-DAYS.indexOf(b.Day)||a.StartTime.localeCompare(b.StartTime)).length?(r.slots).map(s=>`<tr>
     <td><strong>${s.LecturerName}</strong></td><td style="font-size:12px;font-style:italic">${s.Subject||'—'}</td>
     <td style="font-size:12px">${s.CourseName||'—'}</td><td style="font-size:12px">${s.Section||'—'}</td>
-    <td><strong>${s.Day}</strong></td><td style="font-family:monospace;font-size:12px">${s.StartTime}–${s.EndTime}</td>
+    <td><strong>${s.Day}</strong></td><td style="font-size:12px;white-space:nowrap">${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}</td>
     <td><span class="b ${sm[s.Mode]||'b-n'}">${s.Mode==='Physical'?'🏫':'💻'} ${s.Mode}</span></td>
     <td style="font-size:12px">${s.Mode==='Physical'?s.Room||'—':'<a href="'+s.Link+'" target="_blank" style="color:var(--teal)">Link</a>'}</td>
   </tr>`).join(''):'<tr><td colspan="8"><div class="empty"><div class="ei">📅</div><h3>No schedule</h3></div></td></tr>';
@@ -2475,25 +2476,27 @@ function autoShowNextSlot(slots) {
 }
 function renderTTGrid(slots,containerId){
   const cont=document.getElementById(containerId); if(!cont)return;
-  const hours=Array.from({length:11},(_,i)=>('0'+(7+i)).slice(-2)+':00');
-  let h='<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:700px"><thead><tr><th style="width:56px;padding:7px;background:var(--bg);border:1px solid var(--border);font-size:11px;color:var(--muted)">Time</th>';
+  const mins=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(String(t||''));return m?+m[1]*60+ +m[2]:0;};
+  const bucket=s=>Math.min(Math.max(Math.floor(mins(s.StartTime)/60),6),23);
+  const used=slots.map(bucket);
+  const lo=used.length?Math.min(...used):8,hi=used.length?Math.max(...used):14;
+  let h='<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:760px"><thead><tr><th style="width:78px;padding:7px;background:var(--bg);border:1px solid var(--border);font-size:11px;color:var(--muted)">Time</th>';
   DAYS.forEach(d=>h+=`<th style="padding:7px;background:var(--navy);color:#fff;border:1px solid var(--border);text-align:center">${d}</th>`);
   h+='</tr></thead><tbody>';
-  hours.forEach(hr=>{
-    h+=`<tr><td style="padding:5px 7px;background:var(--bg);border:1px solid var(--border);font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap">${hr}</td>`;
+  for(let hr=lo;hr<=hi;hr++){
+    h+=`<tr><td style="padding:6px 8px;background:var(--bg);border:1px solid var(--border);font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap;vertical-align:top">${fmtT(('0'+hr).slice(-2)+':00')}</td>`;
     DAYS.forEach(day=>{
-      const ds=slots.filter(s=>s.Day===day&&s.StartTime<=hr&&s.EndTime>hr);
-      if(!ds.length){h+='<td style="border:1px solid var(--border);min-width:110px;height:34px"></td>';return;}
-      h+='<td style="border:1px solid var(--border);min-width:110px;padding:3px;vertical-align:top">';
+      const ds=slots.filter(s=>s.Day===day&&bucket(s)===hr).sort((a,b)=>mins(a.StartTime)-mins(b.StartTime));
+      if(!ds.length){h+='<td style="border:1px solid var(--border);min-width:120px;height:38px"></td>';return;}
+      h+='<td style="border:1px solid var(--border);min-width:120px;padding:3px;vertical-align:top">';
       ds.forEach(s=>{
-        const bg=s.Mode==='Physical'?'#dcfce7':'#dbeafe';
-        const tc=s.Mode==='Physical'?'#166534':'#1e40af';
-        h+=`<div style="background:${bg};border-radius:4px;padding:3px 5px;margin-bottom:2px;cursor:pointer" onclick='editSlot(${JSON.stringify(s).replace(/'/g,"&#39;")})'><div style="font-size:10px;font-weight:700;color:${tc}">${s.Mode==='Physical'?'🏫':'💻'} ${s.Mode}</div><div style="font-size:11px;font-weight:600">${s.LecturerName.split(' ').slice(0,2).join(' ')}</div><div style="font-size:10px;color:var(--muted);font-style:italic">${s.Subject||''}</div><div style="font-size:10px;color:var(--muted)">${s.StartTime}–${s.EndTime}</div></div>`;
+        const bg=s.Mode==='Physical'?'#dcfce7':'#dbeafe',tc=s.Mode==='Physical'?'#166534':'#1e40af';
+        h+=`<div style="background:${bg};border-radius:4px;padding:4px 6px;margin-bottom:3px;cursor:pointer" onclick='editSlot(${JSON.stringify(s).replace(/'/g,"&#39;")})'><div style="font-size:10px;font-weight:700;color:${tc}">${s.Mode==='Physical'?'🏫':'💻'} ${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}</div><div style="font-size:11px;font-weight:600">${esc((s.LecturerName||'').split(' ').slice(0,2).join(' '))}</div><div style="font-size:10px;color:var(--muted)">${esc(s.Subject||s.CourseName||'')}</div></div>`;
       });
       h+='</td>';
     });
     h+='</tr>';
-  });
+  }
   h+='</tbody></table>';
   cont.innerHTML=h;
 }
@@ -2511,7 +2514,7 @@ function renderTTList(slots,tbId,showLec){
         <td style="font-size:12px">${s.CourseName||'—'}</td>
         <td style="font-size:12px;font-style:italic;color:var(--muted)">${s.Subject||'—'}</td>
         <td><strong>${s.Day||'—'}</strong></td>
-        <td style="font-family:monospace;font-size:12px">${s.StartTime||'—'} – ${s.EndTime||'—'}</td>
+        <td style="font-size:12px;white-space:nowrap">${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}</td>
         <td><span class="b ${sm[s.Mode]||'b-n'}">${s.Mode==='Physical'?'🏫 Physical':'💻 Online'}</span></td>
         <td style="font-size:12px">${s.Mode==='Physical'?(s.Room||'—'):'<a href="'+(s.Link||'#')+'" target="_blank" style="color:var(--teal)">'+(s.Link?'Join Link':'—')+'</a>'}</td>
         <td style="display:flex;gap:3px">
@@ -2520,8 +2523,8 @@ function renderTTList(slots,tbId,showLec){
         </td>
       ` : `
         <td><strong>${s.Day||'—'}</strong></td>
-        <td style="font-family:monospace;font-size:12px">${s.StartTime||'—'}</td>
-        <td style="font-family:monospace;font-size:12px">${s.EndTime||'—'}</td>
+        <td style="font-size:12px;white-space:nowrap">${fmtT(s.StartTime)}</td>
+        <td style="font-size:12px;white-space:nowrap">${fmtT(s.EndTime)}</td>
         <td style="font-size:12px;font-style:italic">${s.Subject||'—'}</td>
         <td style="font-size:12px">${s.CourseName||'—'}</td>
         <td style="font-size:12px">${s.Section||'—'}</td>
@@ -2546,7 +2549,7 @@ function renderTTWeeklyCards(slots){
       const isOnl=s.Mode==='Online';
       return`<div onclick='showSlotDetail(${JSON.stringify(s).replace(/'/g,"&#39;")})' style="display:flex;align-items:center;gap:9px;padding:9px 11px;border:1.5px solid ${isOnl?'#93c5fd':'#86efac'};border-radius:7px;margin-bottom:5px;cursor:pointer;background:${isOnl?'#eff6ff':'#f0fdf4'}">
         <div style="font-size:19px">${isOnl?'💻':'🏫'}</div>
-        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--navy)">${s.StartTime} – ${s.EndTime}</div><div style="font-size:12px;font-weight:600">${s.Subject||''}</div><div style="font-size:11px;color:var(--muted)">${s.CourseName||''} · ${s.Section||''}</div></div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--navy)">${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}</div><div style="font-size:12px;font-weight:600">${s.Subject||''}</div><div style="font-size:11px;color:var(--muted)">${s.CourseName||''} · ${s.Section||''}</div></div>
         <span style="font-size:11px;font-weight:600;color:${isOnl?'#1e40af':'#166534'};background:${isOnl?'#dbeafe':'#dcfce7'};padding:2px 7px;border-radius:10px">${s.Mode}</span>
       </div>`;
     }).join('')}</div>`;
@@ -2562,7 +2565,7 @@ function showSlotDetail(s){
     <div style="background:${isOnl?'#eff6ff':'#f0fdf4'};border-radius:9px;padding:14px;margin-bottom:11px;border-left:4px solid ${isOnl?'#3b82f6':'var(--teal)'}">
       <div style="font-size:20px;margin-bottom:7px">${isOnl?'💻':'🏫'}</div>
       <div style="font-size:16px;font-weight:700;color:var(--navy)">${s.Day}</div>
-      <div style="font-size:20px;font-weight:700;color:${isOnl?'#1d4ed8':'var(--teal)'};margin:3px 0">${s.StartTime} – ${s.EndTime}</div>
+      <div style="font-size:20px;font-weight:700;color:${isOnl?'#1d4ed8':'var(--teal)'};margin:3px 0">${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}</div>
       <div style="font-size:13px;font-weight:600;margin:3px 0">${s.Subject||''}</div>
       <div style="font-size:12px;color:var(--muted)">${s.CourseName||''} · ${s.Section||''}</div>
     </div>
@@ -2832,7 +2835,7 @@ function applyEdit(rp){
   const ls=String(rp.LessonsList||'').split(',').filter(Boolean).map(Number);
   document.querySelectorAll('.lp-btn').forEach(b=>b.classList.toggle('lp-sel',ls.includes(+b.dataset.l)));
   set('rpt-from',rp.LessonsFrom);set('rpt-to',rp.LessonsTo);set('rpt-cnt',ls.length||'');
-  set('rpt-date',String(rp.ClassDate||'').slice(0,10));set('rpt-year',rp.StudentYear);set('rpt-sem',rp.Semester);
+  set('rpt-date',toYMD(rp.ClassDate));set('rpt-year',rp.StudentYear);set('rpt-sem',rp.Semester);
   set('rpt-taj-topic',rp.TajweedTopic);set('rpt-taj-status',rp.TajweedStatus);set('rpt-trans',rp.TranslationStatus);set('rpt-surah',rp.SurahPracticed);
   set('rpt-att',rp.Attendance);set('rpt-tot',rp.TotalStudents);set('rpt-und',rp.UnderstandingLevel);
   set('rpt-obs',rp.Observations);set('rpt-issues',rp.Issues);set('rpt-sug',rp.Suggestions);
@@ -2864,7 +2867,10 @@ async function loadCompare(){
 function renderTTBy(slots){
   const el=document.getElementById('tt-by');if(!el)return;const g={};
   slots.forEach(s=>{const d=s.DeptName||'—',t=s.LecturerName||'—';((g[d]=g[d]||{})[t]=g[d][t]||[]).push(s);});
-  el.innerHTML='<div class="card-hd"><div class="card-title">Department → Teacher wise</div></div><div class="card-bd">'+Object.keys(g).sort().map(d=>`<div style="margin-bottom:12px"><div style="font-weight:700;color:var(--navy)">🏛️ ${esc(d)}</div>`+Object.keys(g[d]).sort().map(t=>`<div style="margin:6px 0 0 12px"><b>${esc(t)}</b> <span class="b b-n">${g[d][t].length} slots</span><div style="font-size:12px;color:var(--muted)">`+g[d][t].map(s=>`${esc(s.Day)} ${esc(s.StartTime)}–${esc(s.EndTime)} · ${esc(s.CourseName)} ${esc(s.Section)}`).join(' &nbsp;|&nbsp; ')+'</div></div>').join('')+'</div>').join('')+'</div>';
+  const ord=s=>DAYS.indexOf(s.Day)*10000+(parseInt(String(s.StartTime||'0:0').replace(':',''),10)||0);
+  const chip=s=>`<div style="background:${s.Mode==='Online'?'#eff6ff':'#f0fdf4'};border:1px solid ${s.Mode==='Online'?'#bfdbfe':'#bbf7d0'};border-radius:6px;padding:5px 9px;font-size:11.5px"><b>${esc((s.Day||'').slice(0,3))}</b> · ${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}<div style="color:var(--muted)">${esc(s.CourseName||'')}${s.Section?' · '+esc(s.Section):''}</div></div>`;
+  const body=Object.keys(g).length?Object.keys(g).sort().map(d=>`<div style="margin-bottom:16px"><div style="font-weight:700;color:var(--navy);padding-bottom:6px;border-bottom:2px solid var(--gold);margin-bottom:6px">🏛️ ${esc(d)}</div>`+Object.keys(g[d]).sort().map(t=>{const L=g[d][t].sort((a,b)=>ord(a)-ord(b));return `<div style="display:flex;gap:14px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed var(--border)"><div style="min-width:190px"><strong>${esc(t)}</strong><div style="font-size:11px;color:var(--muted)">${L.length} ${L.length===1?'class':'classes'} per week</div></div><div style="display:flex;flex-wrap:wrap;gap:6px;flex:1">${L.map(chip).join('')}</div></div>`;}).join('')+'</div>').join(''):'<div class="empty"><div class="ei">📅</div><h3>No slots</h3></div>';
+  el.innerHTML='<div class="card-hd"><div class="card-title">Department → Teacher wise</div></div><div class="card-bd">'+body+'</div>';
 }
 // ── Admin: AI assistant ──
 function aiAdd(cls,html){const l=document.getElementById('ai-log'),d=document.createElement('div');d.className='ai-msg '+cls;d.innerHTML=html;l.appendChild(d);l.scrollTop=l.scrollHeight;return d;}
@@ -2932,14 +2938,14 @@ async function loadClassLog(){
   CLOGS=r.logs||[];const s=r.summary||{};
   g('cl-stats').innerHTML=statCards([['📚','Classes',s.totalClasses||0],['⏱️','Total Hours',fmtH(s.totalHours)],['📅','Teaching Days',(s.byLecturer&&s.byLecturer[0]?s.byLecturer[0].days:0)]]);
   g('cl-tbl').innerHTML=CLOGS.length?CLOGS.map(o=>`<tr>
-    <td><strong>${esc(o.ClassDate)}</strong></td>
-    <td style="font-family:monospace;font-size:12px">${o.StartTime&&o.EndTime?esc(o.StartTime)+'–'+esc(o.EndTime):'—'}</td>
+    <td><strong>${fmtD(o.ClassDate)}</strong></td>
+    <td style="font-family:monospace;font-size:12px">${o.StartTime&&o.EndTime?fmtT(o.StartTime)+' – '+fmtT(o.EndTime):'—'}</td>
     <td><strong>${fmtH(o.Hours)} h</strong></td>
     <td style="font-size:12px">${esc(o.DeptName||'—')}</td><td style="font-size:12px">${esc(o.CourseName||'—')}</td>
-    <td style="font-size:12px">${esc(o.StudentYear)}<br>${esc(o.Semester)}</td>
+    <td style="font-size:12px">${esc(o.Section||'—')}</td><td style="font-size:12px">${esc(o.StudentYear)}<br>${esc(o.Semester)}</td>
     <td style="font-size:12px;color:var(--muted)">${esc(o.Topic||'—')}</td>
     <td style="display:flex;gap:4px"><button class="btn btn-out btn-xs" onclick="editClassLog('${esc(o.LogID)}')">Edit</button><button class="btn btn-del btn-xs" onclick="delClassLog('${esc(o.LogID)}')">Delete</button></td>
-  </tr>`).join(''):'<tr><td colspan="8"><div class="empty"><div class="ei">⏱️</div><h3>No classes logged for this period</h3></div></td></tr>';
+  </tr>`).join(''):'<tr><td colspan="9"><div class="empty"><div class="ei">⏱️</div><h3>No classes logged for this period</h3></div></td></tr>';
 }
 async function saveClassLog(){
   const g=id=>document.getElementById(id);
@@ -2979,9 +2985,16 @@ async function loadHours(){
   const s=r.summary,L=r.logs||[];
   g('hrs-stats').innerHTML=statCards([['📚','Total Classes',s.totalClasses],['⏱️','Total Hours',fmtH(s.totalHours)],['👩‍🏫','Lecturers',s.lecturers]]);
   g('hrs-sum-tbl').innerHTML=s.byLecturer.length?s.byLecturer.map(x=>`<tr><td><a style="cursor:pointer;color:var(--teal);font-weight:600" onclick="hoursFilterLec('${esc(x.lecturerId)}')">${esc(x.name)}</a></td><td>${x.classes}</td><td><strong>${fmtH(x.hours)} h</strong></td><td>${x.days}</td></tr>`).join('')+`<tr style="background:var(--bg)"><td><strong>Total</strong></td><td><strong>${s.totalClasses}</strong></td><td><strong>${fmtH(s.totalHours)} h</strong></td><td></td></tr>`:'<tr><td colspan="4"><div class="empty"><div class="ei">⏱️</div><h3>No classes logged for this period</h3></div></td></tr>';
-  g('hrs-det-tbl').innerHTML=L.map(o=>`<tr><td><strong>${esc(o.ClassDate)}</strong></td><td>${esc(o.LecturerName)}</td><td style="font-family:monospace;font-size:12px">${o.StartTime&&o.EndTime?esc(o.StartTime)+'–'+esc(o.EndTime):'—'}</td><td><strong>${fmtH(o.Hours)} h</strong></td><td style="font-size:12px">${esc(o.DeptName||'—')}</td><td style="font-size:12px">${esc(o.CourseName||'—')}</td><td style="font-size:12px">${esc(o.StudentYear)} · ${esc(o.Semester)}</td><td style="font-size:12px;color:var(--muted)">${esc(o.Topic||'—')}</td></tr>`).join('');
+  g('hrs-det-tbl').innerHTML=L.map(o=>`<tr><td><strong>${fmtD(o.ClassDate)}</strong></td><td>${esc(o.LecturerName)}</td><td style="font-family:monospace;font-size:12px">${o.StartTime&&o.EndTime?fmtT(o.StartTime)+' – '+fmtT(o.EndTime):'—'}</td><td><strong>${fmtH(o.Hours)} h</strong></td><td style="font-size:12px">${esc(o.DeptName||'—')}</td><td style="font-size:12px">${esc(o.CourseName||'—')}</td><td style="font-size:12px">${esc(o.Section||'—')}</td><td style="font-size:12px">${esc(o.StudentYear)} · ${esc(o.Semester)}</td><td style="font-size:12px;color:var(--muted)">${esc(o.Topic||'—')}</td></tr>`).join('');
 }
 function hoursFilterLec(id){document.getElementById('hf-lec').value=id;loadHours();}
+
+// ── Display formats: DD/MM/YYYY and 12-hour time ──
+function fmtT(t){if(!t)return '—';const m=/^(\d{1,2}):(\d{2})/.exec(String(t));if(!m)return esc(t);let hh=+m[1];const ap=hh>=12?'PM':'AM';hh=hh%12||12;return hh+':'+m[2]+' '+ap;}
+const p2=n=>String(n).padStart(2,'0');
+function fmtD(v){if(!v)return '—';const s=String(v);if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(0,4);const d=new Date(s);return isNaN(d)?esc(s):p2(d.getDate())+'/'+p2(d.getMonth()+1)+'/'+d.getFullYear();}
+function fmtDT(v){if(!v)return '—';const d=new Date(String(v).replace(' ','T'));return isNaN(d)?esc(v):p2(d.getDate())+'/'+p2(d.getMonth()+1)+'/'+d.getFullYear()+' '+fmtT(p2(d.getHours())+':'+p2(d.getMinutes()));}
+function toYMD(v){if(!v)return '';const s=String(v);if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;const d=new Date(s);return isNaN(d)?s.slice(0,10):d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());}
 </script>
 </body>
 </html>
