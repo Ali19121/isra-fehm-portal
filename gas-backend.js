@@ -118,6 +118,10 @@ function doPost(e) {
       case 'updateTimetableSlot': return respond(updateTimetableSlot(caller, body));
       case 'deleteTimetableSlot': return respond(deleteTimetableSlot(caller, body));
 
+      case 'addClassLog':         return respond(addClassLog(caller, body));
+      case 'updateClassLog':      return respond(updateClassLog(caller, body));
+      case 'deleteClassLog':      return respond(deleteClassLog(caller, body));
+      case 'getClassLogs':        return respond(getClassLogs(caller, body));
       case 'sync':                return respond(syncAction(caller, body));
       case 'getComparison':       return respond(getComparison(caller, body));
       case 'aiChat':              return respond(aiChat(caller, body));
@@ -131,7 +135,7 @@ function doPost(e) {
 }
 
 function doGet(e) {
-  return respond({ ok: true, message: 'Fehm-e-Quran API is running', version: '2.0' });
+  return respond({ ok: true, message: 'Fehm-e-Quran API is running', version: '3.1' });
 }
 
 function respond(data, code) {
@@ -883,7 +887,7 @@ function updateTimetableSlot(caller, body) {
     if (data[i][0] === body.slotId) {
       // Teachers can only edit their own slots
       if (caller.role === 'teacher' && data[i][1] !== caller.id) {
-        return { ok:false, error:'Ap sirf apna slot edit kar sakte hain.' };
+        return { ok:false, error:'You can only edit your own slots.' };
       }
       const row = i + 1;
       const setCol = (col, val) => { if (val !== undefined) sheet.getRange(row, headers.indexOf(col)+1).setValue(val); };
@@ -919,7 +923,7 @@ function deleteTimetableSlot(caller, body) {
     if (data[i][0] === body.slotId) {
       // Teachers can only delete their own slots
       if (caller.role === 'teacher' && data[i][1] !== caller.id) {
-        return { ok:false, error:'Ap sirf apna slot delete kar sakte hain.' };
+        return { ok:false, error:'You can only delete your own slots.' };
       }
       sheet.deleteRow(i + 1);
       writeLog(ss, caller.id, caller.username, caller.role, 'Delete Timetable Slot', body.slotId);
@@ -1007,6 +1011,7 @@ function migrateSheets() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   ensureCols(ss.getSheetByName(SH.REPORTS), NEW_COLS.REPORTS);
   ensureCols(ss.getSheetByName(SH.USERS),   NEW_COLS.USERS);
+  clSheet(ss);   // creates the ClassLogs sheet if it does not exist
   console.log('✅ Migration done — existing data untouched.');
 }
 
@@ -1067,7 +1072,7 @@ function submitReport(caller, body) {
         String(r[ix('WeekNum')]) === String(body.weekNum) && String(r[ix('CourseID')]) === String(body.courseId || ''));
     }
     if (row > 0 && data[row][ix('Status')] === 'approved')
-      return { ok:false, error:'Approved report locked. Coordinator se return karwa ke edit karen.' };
+      return { ok:false, error:'This report is approved and locked. Ask your coordinator to return it before editing.' };
 
     const rec = {
       LecturerID:caller.id, AssignID:body.assignId||'', CourseID:body.courseId||'', DeptID:body.deptId||'',
@@ -1146,7 +1151,7 @@ function aiChat(caller, body) {
   if (caller.role !== 'admin') return { ok:false, error:'Admin only' };
   const props = PropertiesService.getScriptProperties();
   const key = props.getProperty('GEMINI_KEY');
-  if (!key) return { ok:false, error:'GEMINI_KEY Script Properties me set nahi hai (Project Settings → Script properties).' };
+  if (!key) return { ok:false, error:'GEMINI_KEY is not set in Script Properties (Project Settings → Script properties).' };
   const models = (props.getProperty('GEMINI_MODELS') || AI_MODELS.join(',')).split(',').map(s => s.trim()).filter(Boolean);
   const cmp = getComparison(caller, {});
   const tt  = getTimetable(caller, {});
@@ -1157,14 +1162,15 @@ function aiChat(caller, body) {
       att:r.Attendance, tot:r.TotalStudents, und:r.Understanding,
       plan: r.planned ? `${r.planned.unit} L${r.planned.from}-${r.planned.to}` : '', act:`${r.actual.unit} L${r.actual.from}-${r.actual.to}`,
       gap:r.gap, state:r.state })),
+    teachingHours: classHoursSummary(),
     timetable: ((tt && tt.slots) || []).slice(0, 250).map(s => ({
       t:s.LecturerName, dept:s.DeptName, course:s.CourseName, sec:s.Section, day:s.Day, mode:s.Mode }))
   };
   const SYS = 'You are the analytics assistant for Isra University Fehm-e-Quran portal (admin only). ' +
-    'Answer in the language of the question (Roman Urdu/Urdu/English). Use ONLY the supplied DATA. ' +
+    'Reply in the same language and script the user wrote in (English by default; Urdu script if the question is in Urdu; Roman Urdu only if the question is written in Roman Urdu). Keep a professional, concise tone. Use ONLY the supplied DATA. ' +
     'Reply as JSON: {"answer":string,"charts":[{"type":"bar|line|pie|doughnut","title":string,"labels":[string],"data":[number],"label":string}],' +
     '"slides":[{"title":string,"bullets":[string]}]}. Add charts only when useful; add slides only when asked for a presentation/slides/report. ' +
-    'gap = actual lesson position minus planned (positive = ahead, negative = behind).';
+    'gap = actual lesson position minus planned (positive = ahead, negative = behind). teachingHours lists monthly classes and hours per visiting lecturer. Write chart titles, labels and slide text in the reply language.';
   const hist = (body.history || []).slice(-6).map(m => ({ role: m.role === 'user' ? 'user' : 'model', parts:[{ text:String(m.text).slice(0, 1500) }] }));
   const payload = {
     systemInstruction: { parts:[{ text:SYS }] },
@@ -1181,7 +1187,7 @@ function aiChat(caller, body) {
     const code = res.getResponseCode();
     let j = {}; try { j = JSON.parse(res.getContentText()); } catch (e) {}
     const emsg = (j.error && j.error.message) || code;
-    if (code === 401 || code === 403) return { ok:false, error:'API key reject hui: ' + emsg };
+    if (code === 401 || code === 403) return { ok:false, error:'API key rejected: ' + emsg };
     if (code !== 200) { lastErr = model + ' (' + code + '): ' + emsg; continue; }   // 404/429/5xx → next model
     const parts = (((j.candidates || [])[0] || {}).content || {}).parts;
     const txt = parts ? parts.map(p => p.text || '').join('') : '';
@@ -1189,7 +1195,7 @@ function aiChat(caller, body) {
     let out; try { out = JSON.parse(txt); } catch (e) { out = { answer: txt }; }
     return { ok:true, answer: out.answer || '', charts: out.charts || [], slides: out.slides || [], model };
   }
-  return { ok:false, error:'Sab AI models fail hue. Last: ' + lastErr };
+  return { ok:false, error:'All AI models failed. Last error: ' + lastErr };
 }
 
 // Run once from the editor to check which models/key work (see View → Logs)
@@ -1201,4 +1207,151 @@ function testAI() {
         payload: JSON.stringify({ contents:[{ parts:[{ text:'Say OK' }] }] }), muteHttpExceptions:true });
     console.log(m + ' → ' + r.getResponseCode());
   });
+}
+
+// ============================================================
+//  CLASS LOG — visiting lecturers record classes (date + hours)
+//  Stored in a NEW sheet "ClassLogs" (created automatically). Existing sheets are untouched.
+// ============================================================
+const CL_HEADERS = ['LogID','LecturerID','LecturerName','ClassDate','DeptID','DeptName','CourseID','CourseName',
+  'StudentYear','Semester','Section','StartTime','EndTime','Hours','Topic','Notes','CreatedAt','UpdatedAt'];
+
+function clSheet(ss) {
+  let sh = ss.getSheetByName('ClassLogs');
+  if (!sh) {
+    sh = ss.insertSheet('ClassLogs');
+    sh.appendRow(CL_HEADERS);
+    sh.getRange(1, 1, 1, CL_HEADERS.length).setFontWeight('bold').setBackground('#1a2744').setFontColor('#ffffff');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+function ymd(v) { return v instanceof Date ? Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd') : String(v || '').slice(0, 10); }
+function hm(v)  { return v instanceof Date ? Utilities.formatDate(v, Session.getScriptTimeZone(), 'HH:mm') : String(v || '').slice(0, 5); }
+function toMin(t) { const m = /^(\d{1,2}):(\d{2})/.exec(String(t || '')); return m ? (+m[1]) * 60 + (+m[2]) : null; }
+function todayYmd() { return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd'); }
+function clRow(h, r) {
+  const o = rowToObj(h, r);
+  o.ClassDate = ymd(o.ClassDate); o.StartTime = hm(o.StartTime); o.EndTime = hm(o.EndTime); o.Hours = Number(o.Hours) || 0;
+  return o;
+}
+function clWrite(sh, h, rowNo, obj) {
+  ['ClassDate','StartTime','EndTime'].forEach(c => sh.getRange(rowNo, h.indexOf(c) + 1).setNumberFormat('@'));  // keep dates/times as plain text
+  sh.getRange(rowNo, 1, 1, h.length).setValues([h.map(c => obj[c] !== undefined ? obj[c] : '')]);
+}
+function userFullName(ss, id) {
+  const d = ss.getSheetByName(SH.USERS).getDataRange().getValues(), h = d[0];
+  const r = d.slice(1).find(x => x[h.indexOf('UserID')] === id);
+  return r ? r[h.indexOf('FullName')] : id;
+}
+function clPrepare(b) {
+  const d = String(b.classDate || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return { err:'Please select a valid class date.' };
+  if (d > todayYmd())  return { err:'Class date cannot be in the future.' };
+  if (!b.deptId)       return { err:'Department is required.' };
+  if (!b.studentYear)  return { err:'Year is required.' };
+  if (!b.semester)     return { err:'Semester is required.' };
+  const s = toMin(b.startTime), e = toMin(b.endTime);
+  let hrs = parseFloat(b.hours);
+  if (!(hrs > 0) && s !== null && e !== null && e > s) hrs = Math.round((e - s) / 60 * 100) / 100;
+  if (!(hrs > 0) || hrs > 12) return { err:'Hours must be between 0.25 and 12.' };
+  return { rec:{ ClassDate:d, DeptID:b.deptId, CourseID:b.courseId || '', StudentYear:b.studentYear, Semester:b.semester,
+    Section:String(b.section || '').slice(0, 60), StartTime:b.startTime || '', EndTime:b.endTime || '', Hours:hrs,
+    Topic:String(b.topic || '').slice(0, 200), Notes:String(b.notes || '').slice(0, 500) } };
+}
+
+function addClassLog(caller, body) {
+  if (!['teacher','admin'].includes(caller.role)) return { ok:false, error:'Forbidden' };
+  const lecId = caller.role === 'admin' ? (body.lecturerId || '') : caller.id;
+  if (!lecId) return { ok:false, error:'Lecturer is required.' };
+  const p = clPrepare(body); if (p.err) return { ok:false, error:p.err };
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sh = clSheet(ss);
+    const data = sh.getDataRange().getValues(), h = data[0], rec = p.rec;
+    if (rec.StartTime && rec.EndTime && data.slice(1).some(r => { const o = clRow(h, r);
+        return o.LecturerID === lecId && o.ClassDate === rec.ClassDate && o.StartTime === rec.StartTime && o.EndTime === rec.EndTime; }))
+      return { ok:false, error:'A class with the same date and time is already logged.' };
+    const row = Object.assign({}, rec, { LogID:'CL' + String(Date.now()).slice(-8), LecturerID:lecId, LecturerName:userFullName(ss, lecId),
+      DeptName:getDeptName(ss, rec.DeptID), CourseName:getCourseName(ss, rec.CourseID), CreatedAt:now(), UpdatedAt:now() });
+    clWrite(sh, h, sh.getLastRow() + 1, row);
+    writeLog(ss, caller.id, caller.username, caller.role, 'Add Class Log', `${row.LecturerName}: ${rec.ClassDate}, ${rec.Hours}h`);
+    return { ok:true, logId:row.LogID };
+  } finally { lock.releaseLock(); }
+}
+
+function updateClassLog(caller, body) {
+  if (!['teacher','admin'].includes(caller.role)) return { ok:false, error:'Forbidden' };
+  const p = clPrepare(body); if (p.err) return { ok:false, error:p.err };
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sh = clSheet(ss);
+    const data = sh.getDataRange().getValues(), h = data[0];
+    const i = data.findIndex((r, k) => k > 0 && r[h.indexOf('LogID')] === body.logId);
+    if (i < 0) return { ok:false, error:'Class entry not found.' };
+    const old = rowToObj(h, data[i]);
+    if (caller.role === 'teacher' && old.LecturerID !== caller.id) return { ok:false, error:'You can only edit your own entries.' };
+    const row = Object.assign(old, p.rec, { DeptName:getDeptName(ss, p.rec.DeptID), CourseName:getCourseName(ss, p.rec.CourseID), UpdatedAt:now() });
+    clWrite(sh, h, i + 1, row);
+    writeLog(ss, caller.id, caller.username, caller.role, 'Edit Class Log', `${old.LecturerName}: ${p.rec.ClassDate}, ${p.rec.Hours}h`);
+    return { ok:true };
+  } finally { lock.releaseLock(); }
+}
+
+function deleteClassLog(caller, body) {
+  if (!['teacher','admin'].includes(caller.role)) return { ok:false, error:'Forbidden' };
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sh = clSheet(ss);
+    const data = sh.getDataRange().getValues(), h = data[0];
+    const i = data.findIndex((r, k) => k > 0 && r[h.indexOf('LogID')] === body.logId);
+    if (i < 0) return { ok:false, error:'Class entry not found.' };
+    if (caller.role === 'teacher' && data[i][h.indexOf('LecturerID')] !== caller.id) return { ok:false, error:'You can only delete your own entries.' };
+    sh.deleteRow(i + 1);
+    writeLog(ss, caller.id, caller.username, caller.role, 'Delete Class Log', body.logId);
+    return { ok:true };
+  } finally { lock.releaseLock(); }
+}
+
+function getClassLogs(caller, body) {
+  if (!['admin','coordinator','teacher'].includes(caller.role)) return { ok:false, error:'Forbidden' };
+  body = body || {};
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sh = clSheet(ss);
+  const d = sh.getDataRange().getValues(), h = d[0];
+  let logs = d.slice(1).map(r => clRow(h, r)).filter(o => o.LogID);
+  if (caller.role === 'teacher') logs = logs.filter(o => o.LecturerID === caller.id);
+  if (caller.role === 'coordinator') {
+    const u = ss.getSheetByName(SH.USERS).getDataRange().getValues(), uh = u[0];
+    const mine = u.slice(1).filter(r => r[uh.indexOf('CoordinatorID')] === caller.id).map(r => r[uh.indexOf('UserID')]);
+    logs = logs.filter(o => mine.includes(o.LecturerID));
+  }
+  if (body.month)       logs = logs.filter(o => o.ClassDate.slice(0, 7) === body.month);
+  if (body.lecturerId)  logs = logs.filter(o => o.LecturerID  === body.lecturerId);
+  if (body.deptId)      logs = logs.filter(o => o.DeptID      === body.deptId);
+  if (body.courseId)    logs = logs.filter(o => o.CourseID    === body.courseId);
+  if (body.studentYear) logs = logs.filter(o => o.StudentYear === body.studentYear);
+  if (body.semester)    logs = logs.filter(o => o.Semester    === body.semester);
+  logs.sort((a, b) => b.ClassDate.localeCompare(a.ClassDate) || String(b.StartTime).localeCompare(String(a.StartTime)));
+  const by = {};
+  logs.forEach(o => {
+    const s = by[o.LecturerID] = by[o.LecturerID] || { lecturerId:o.LecturerID, name:o.LecturerName, classes:0, hours:0, dates:{} };
+    s.classes++; s.hours += o.Hours; s.dates[o.ClassDate] = 1;
+  });
+  const byLecturer = Object.values(by).map(s => ({ lecturerId:s.lecturerId, name:s.name, classes:s.classes,
+    hours:Math.round(s.hours * 100) / 100, days:Object.keys(s.dates).length })).sort((a, b) => b.hours - a.hours);
+  return { ok:true, logs, summary:{ totalClasses:logs.length,
+    totalHours:Math.round(logs.reduce((t, o) => t + o.Hours, 0) * 100) / 100, lecturers:byLecturer.length, byLecturer } };
+}
+
+function classHoursSummary() {
+  const sh = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName('ClassLogs');
+  if (!sh || sh.getLastRow() < 2) return [];
+  const d = sh.getDataRange().getValues(), h = d[0], g = {};
+  d.slice(1).forEach(r => {
+    const o = clRow(h, r); if (!o.LogID) return;
+    const m = o.ClassDate.slice(0, 7), k = [o.LecturerName, m, o.DeptName, o.StudentYear, o.Semester].join('|');
+    const s = g[k] = g[k] || { t:o.LecturerName, month:m, dept:o.DeptName, yr:o.StudentYear, sem:o.Semester, classes:0, hours:0 };
+    s.classes++; s.hours = Math.round((s.hours + o.Hours) * 100) / 100;
+  });
+  return Object.values(g).slice(-400);
 }
