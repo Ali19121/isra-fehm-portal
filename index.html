@@ -513,6 +513,7 @@ tbody tr{transition:background .12s}
   padding:5px;line-height:1;color:var(--navy)}
 @media(max-width:768px){.mob-menu{display:flex;align-items:center}}
 .live-u{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;border-bottom:1px solid var(--border)}.ai-msg{padding:10px 13px;border-radius:10px;margin:8px 0;font-size:13px;line-height:1.6;max-width:92%}.ai-u{background:var(--navy);color:#fff;margin-left:auto}.ai-b{background:var(--bg);border:1px solid var(--border)}.ai-tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.cl-grid{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}@media(max-width:900px){.cl-grid{grid-template-columns:1fr}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js"></script>
@@ -605,6 +606,7 @@ tbody tr{transition:background .12s}
         <div class="ni" data-panel="admin-compare"><span class="ni-icon">📈</span>Plan vs Actual</div>
         <div class="ni" data-panel="admin-schedule"><span class="ni-icon">📅</span>Course Schedule</div>
         <div class="ni" data-panel="admin-timetable"><span class="ni-icon">🕐</span>Timetable</div>
+        <div class="ni" data-panel="admin-hours"><span class="ni-icon">⏱️</span>Teaching Hours</div>
         <div class="ni" data-panel="admin-ai"><span class="ni-icon">🤖</span>AI Assistant</div>
         <div class="ni" data-panel="admin-logs"><span class="ni-icon">🕵️</span>Activity Logs</div>
       </div>
@@ -630,6 +632,7 @@ tbody tr{transition:background .12s}
         <div class="ni" data-panel="t-history"><span class="ni-icon">📋</span>My Reports</div>
         <div class="ni" data-panel="t-schedule"><span class="ni-icon">📅</span>Course Schedule</div>
         <div class="ni" data-panel="t-timetable"><span class="ni-icon">🕐</span>My Timetable</div>
+        <div class="ni" data-panel="t-classlog"><span class="ni-icon">⏱️</span>Class Log</div>
       </div>
     </div>
 
@@ -791,7 +794,7 @@ tbody tr{transition:background .12s}
 
       <!-- ══ ADMIN TIMETABLE ══ -->
       <div id="panel-admin-compare" class="panel">
-        <div class="sec-hd"><div><div class="sec-title">Planned vs Teacher Report</div><div class="sec-sub">Official 16-week plan ke muqabil teacher ki actual progress</div></div></div>
+        <div class="sec-hd"><div><div class="sec-title">Planned vs Teacher Report</div><div class="sec-sub">Official 16-week plan compared with each teacher's actual progress</div></div></div>
         <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
           <select class="fi" style="width:170px;padding:6px 10px" id="cmp-dept" onchange="loadCompare()"><option value="">All Departments</option></select>
           <select class="fi" style="width:170px;padding:6px 10px" id="cmp-course" onchange="loadCompare()"><option value="">All Courses</option></select>
@@ -806,11 +809,32 @@ tbody tr{transition:background .12s}
       </div>
 
       <div id="panel-admin-ai" class="panel">
-        <div class="sec-hd"><div><div class="sec-title">🤖 AI Assistant (Admin)</div><div class="sec-sub">Data ka analysis, charts, PDF report aur slides — apne alfaz me poochein</div></div></div>
+        <div class="sec-hd"><div><div class="sec-title">🤖 AI Assistant (Admin)</div><div class="sec-sub">Data analysis, charts, PDF reports and slides — ask in your own words</div></div></div>
         <div class="card"><div class="card-bd">
-          <div id="ai-log" style="min-height:260px;max-height:55vh;overflow:auto"><div class="ai-msg ai-b">Assalam o Alaikum! Misal: "Kaun se teachers plan se pichhe hain? Chart bana do" ya "is hafte ki report ka PDF aur slides banao".</div></div>
-          <div style="display:flex;gap:8px;margin-top:10px"><input class="fi" id="ai-in" placeholder="Sawal likhein…" onkeydown="if(event.key==='Enter')aiSend()"><button class="btn btn-navy" id="ai-btn" onclick="aiSend()">Send</button></div>
+          <div id="ai-log" style="min-height:260px;max-height:55vh;overflow:auto"><div class="ai-msg ai-b">Welcome. Ask me about reports, plan progress, attendance, timetables or teaching hours. For example: “Which teachers are behind the plan? Show a chart” or “Prepare a PDF and slides for this week’s reports.”</div></div>
+          <div style="display:flex;gap:8px;margin-top:10px"><input class="fi" id="ai-in" placeholder="Type your question…" onkeydown="if(event.key==='Enter')aiSend()"><button class="btn btn-navy" id="ai-btn" onclick="aiSend()">Send</button></div>
         </div></div>
+      </div>
+
+      <div id="panel-admin-hours" class="panel">
+        <div class="sec-hd"><div><div class="sec-title">Teaching Hours</div><div class="sec-sub">Monthly classes and hours taught by each lecturer</div></div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn btn-out btn-sm" onclick="exportCSV('hrs-sum-tbl','teaching-hours-summary.csv')">📥 Export Summary</button><button class="btn btn-out btn-sm" onclick="exportCSV('hrs-det-tbl','teaching-hours-details.csv')">📥 Export Details</button></div></div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+          <input type="month" class="fi" style="width:160px;padding:6px 10px" id="hf-month" onchange="loadHours()">
+          <select class="fi" style="width:190px;padding:6px 10px" id="hf-lec" onchange="loadHours()"><option value="">All lecturers</option></select>
+          <select class="fi" style="width:170px;padding:6px 10px" id="hf-dept" onchange="loadHours()"><option value="">All departments</option></select>
+          <select class="fi" style="width:130px;padding:6px 10px" id="hf-year" onchange="loadHours()"><option value="">All years</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option></select>
+          <select class="fi" style="width:150px;padding:6px 10px" id="hf-sem" onchange="loadHours()"><option value="">All semesters</option><option>Semester 1</option><option>Semester 2</option><option>Semester 3</option><option>Semester 4</option><option>Semester 5</option><option>Semester 6</option><option>Semester 7</option><option>Semester 8</option></select>
+        </div>
+        <div class="stats-row" id="hrs-stats"></div>
+        <div class="card" style="margin-bottom:16px"><div class="card-hd"><div class="card-title">Summary by Lecturer</div></div><div class="tw"><table>
+          <thead><tr><th>Lecturer</th><th>Classes</th><th>Total Hours</th><th>Teaching Days</th></tr></thead>
+          <tbody id="hrs-sum-tbl"><tr><td colspan="4"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
+        </table></div></div>
+        <div class="card"><div class="card-hd"><div class="card-title">Class Details</div></div><div class="tw"><table>
+          <thead><tr><th>Date</th><th>Lecturer</th><th>Time</th><th>Hours</th><th>Department</th><th>Course</th><th>Year / Semester</th><th>Topic</th></tr></thead>
+          <tbody id="hrs-det-tbl"></tbody>
+        </table></div></div>
       </div>
 
       <div id="panel-admin-timetable" class="panel">
@@ -998,7 +1022,7 @@ tbody tr{transition:background .12s}
                     <select id="rpt-dept" onchange="onRptDeptChange()">
                       <option value="">— Select Department —</option>
                     </select>
-                    <div class="hint">Is hafte kaunse department mein class hai?</div>
+                    <div class="hint">Select the department in which this class was conducted.</div>
                   </div>
                   <div class="fg">
                     <label>Course *</label>
@@ -1097,6 +1121,48 @@ tbody tr{transition:background .12s}
       </div>
 
       <!-- ══ TEACHER HISTORY ══ -->
+      <div id="panel-t-classlog" class="panel">
+        <div class="sec-hd"><div><div class="sec-title">Class Log</div><div class="sec-sub">Record each class you teach (date and hours). Monthly totals are calculated automatically.</div></div></div>
+        <div class="cl-grid">
+          <div class="card" id="cl-form-card">
+            <div class="card-hd"><div class="card-title" id="cl-form-title">Add Class</div></div>
+            <div class="card-bd">
+              <div class="fg-grid">
+                <div class="fg"><label>Class Date *</label><input type="date" id="cl-date"></div>
+                <div class="fg-grid c3">
+                  <div class="fg"><label>Start</label><input type="time" id="cl-start" oninput="calcClassHours()"></div>
+                  <div class="fg"><label>End</label><input type="time" id="cl-end" oninput="calcClassHours()"></div>
+                  <div class="fg"><label>Hours *</label><input type="number" id="cl-hours" min="0.25" max="12" step="0.25" placeholder="e.g. 1.5"></div>
+                </div>
+                <div class="fg"><label>Department *</label><select id="cl-dept"><option value="">Select department</option></select></div>
+                <div class="fg"><label>Course</label><select id="cl-course"><option value="">Select course (optional)</option></select></div>
+                <div class="fg-grid c2">
+                  <div class="fg"><label>Year *</label><select id="cl-year"><option value="">Select year</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option></select></div>
+                  <div class="fg"><label>Semester *</label><select id="cl-sem"><option value="">Select semester</option><option>Semester 1</option><option>Semester 2</option><option>Semester 3</option><option>Semester 4</option><option>Semester 5</option><option>Semester 6</option><option>Semester 7</option><option>Semester 8</option></select></div>
+                </div>
+                <div class="fg"><label>Section</label><input type="text" id="cl-sec" placeholder="e.g. Section A"></div>
+                <div class="fg"><label>Topic</label><input type="text" id="cl-topic" placeholder="e.g. Unit 3, Lessons 4–6"></div>
+                <div class="fg"><label>Notes</label><textarea id="cl-notes" style="min-height:56px"></textarea></div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:14px"><button class="btn btn-gold" id="cl-save" style="flex:1;justify-content:center" onclick="saveClassLog()">Save Class</button><button class="btn btn-out" onclick="resetClassForm()">Clear</button></div>
+            </div>
+          </div>
+          <div>
+            <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+              <input type="month" class="fi" style="width:160px;padding:6px 10px" id="clf-month" onchange="loadClassLog()">
+              <select class="fi" style="width:170px;padding:6px 10px" id="clf-dept" onchange="loadClassLog()"><option value="">All departments</option></select>
+              <select class="fi" style="width:130px;padding:6px 10px" id="clf-year" onchange="loadClassLog()"><option value="">All years</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option></select>
+              <select class="fi" style="width:150px;padding:6px 10px" id="clf-sem" onchange="loadClassLog()"><option value="">All semesters</option><option>Semester 1</option><option>Semester 2</option><option>Semester 3</option><option>Semester 4</option><option>Semester 5</option><option>Semester 6</option><option>Semester 7</option><option>Semester 8</option></select>
+            </div>
+            <div class="stats-row" id="cl-stats"></div>
+            <div class="card"><div class="tw"><table>
+              <thead><tr><th>Date</th><th>Time</th><th>Hours</th><th>Department</th><th>Course</th><th>Year / Semester</th><th>Topic</th><th>Actions</th></tr></thead>
+              <tbody id="cl-tbl"><tr><td colspan="8"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
+            </table></div></div>
+          </div>
+        </div>
+      </div>
+
       <div id="panel-t-history" class="panel">
         <div class="sec-hd"><div class="sec-title">My Report History</div><button class="btn btn-out btn-sm" onclick="exportCSV('t-hist-tbl','my-reports.csv')">📥 Export</button></div>
         <div class="card"><div class="tw"><table>
@@ -1402,7 +1468,7 @@ async function apiRaw(payload) {
   } catch(e) {
     showLoader(false);
     console.warn('GAS fetch failed:', e.message);
-    return {ok:false,error:'Network error — internet check karen, data save nahi hua'};
+    return {ok:false,error:'Network error — please check your internet connection. Your data was not saved.'};
   }
 }
 
@@ -1540,13 +1606,13 @@ async function doLogin() {
   const password = document.getElementById('inp-pass').value.trim();
   const errEl    = document.getElementById('auth-err');
   errEl.style.display = 'none';
-  if (!username||!password) { showAuthErr('Username aur password enter karo'); return; }
+  if (!username||!password) { showAuthErr('Please enter your username and password'); return; }
   setBtnLoading(true);
   const res = await api({action:'login', username, password});
   setBtnLoading(false);
   if (!res.ok) {
     let msg = res.error || 'Login failed';
-    if (msg.includes('Connection failed')||msg.includes('fetch')) msg='Internet ya GAS URL check karo — ya demo login try karo';
+    if (msg.includes('Connection failed')||msg.includes('fetch')) msg='Unable to connect. Please check your internet connection or the server URL.';
     showAuthErr(msg);
     return;
   }
@@ -1617,7 +1683,7 @@ function bootApp() {
 const PANEL_TITLES = {
   'admin-dash':'Dashboard','admin-depts':'Departments','admin-users':'Manage Users',
   'admin-courses':'Courses','admin-reports':'All Reports','admin-schedule':'Course Schedule',
-  'admin-timetable':'Timetable','admin-compare':'Plan vs Actual','admin-ai':'AI Assistant','admin-logs':'Activity Logs','admin-settings':'Settings',
+  'admin-timetable':'Timetable','admin-compare':'Plan vs Actual','admin-hours':'Teaching Hours','t-classlog':'Class Log','admin-ai':'AI Assistant','admin-logs':'Activity Logs','admin-settings':'Settings',
   'coord-dash':'Dashboard','coord-teachers':'My Lecturers','coord-reports':'Review Reports',
   'coord-timetable':'Timetable','coord-summary':'Weekly Summary',
   't-dash':'My Dashboard','t-submit':'Submit Report','t-history':'My Reports',
@@ -1632,6 +1698,8 @@ const PANEL_LOADERS = {
   'admin-schedule':  () => loadSchedule('CRS001'),
   'admin-timetable': loadAdminTT,
   'admin-compare':   loadCompare,
+  'admin-hours':     loadHours,
+  't-classlog':      loadClassLog,
   'admin-ai':        ()=>{},
   'admin-logs':      loadLogs,
   'admin-settings':  () => { const el=document.getElementById('set-gas'); if(el&&GAS_URL)el.value=GAS_URL; },
@@ -1699,8 +1767,7 @@ async function chainDeptCourse(deptId_el, courseId_el) {
   const deptId=document.getElementById(deptId_el)?.value||'';
   const coSel=document.getElementById(courseId_el); if(!coSel) return;
   while(coSel.options.length>1) coSel.remove(1);
-  const filtered=COURSES.filter(c=>!deptId||c.DeptID===deptId);
-  filtered.forEach(c=>coSel.add(new Option(c.CourseName,c.CourseID)));
+  COURSES.forEach(c=>coSel.add(new Option(c.CourseName,c.CourseID)));
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1785,7 +1852,7 @@ async function loadDepts2() {
 }
 async function saveDept() {
   const n=document.getElementById('d-name').value.trim();
-  if(!n){toast('Name zaroori hai','warn');return;}
+  if(!n){toast('Department name is required','warn');return;}
   const r=await api({action:'addDepartment',deptName:n,deptCode:document.getElementById('d-code').value,headName:document.getElementById('d-head').value});
   if(r.ok){closeModal('mdept');toast('Department added!','ok');loadDepts().then(loadDepts2);}
   else toast(r.error,'err');
@@ -1862,8 +1929,8 @@ function editUser(uid){
 async function saveUser(){
   const editId=document.getElementById('u-edit-id').value;
   const p={fullName:document.getElementById('u-name').value.trim(),username:document.getElementById('u-uname').value.trim(),password:document.getElementById('u-pass').value.trim(),role:document.getElementById('u-role').value,deptId:document.getElementById('u-dept').value,courseId:document.getElementById('u-course').value,section:document.getElementById('u-sec').value.trim(),coordId:document.getElementById('u-coord').value,email:document.getElementById('u-email').value.trim()};
-  if(!p.fullName||!p.username){toast('Naam aur username zaroori hai','warn');return;}
-  if(!editId&&!p.password){toast('Password zaroori hai','warn');return;}
+  if(!p.fullName||!p.username){toast('Full name and username are required','warn');return;}
+  if(!editId&&!p.password){toast('Password is required','warn');return;}
   const r=await api(editId?{action:'updateUser',userId:editId,...p}:{action:'addUser',...p});
   if(r.ok){closeModal('muser');toast(editId?'User updated!':'User added!','ok');loadUsers();}
   else toast(r.error,'err');
@@ -1898,7 +1965,7 @@ function parseCsv(file){
   reader.readAsText(file);
 }
 async function uploadCsv(){
-  if(!CSV_DATA.length){toast('Koi data nahi','warn');return;}
+  if(!CSV_DATA.length){toast('No data to upload','warn');return;}
   const r=await api({action:'bulkAddUsers',users:CSV_DATA});
   if(r.ok){closeModal('mcsv');toast(`✅ Added ${r.added} · Skipped ${r.skipped}`,'ok');if(r.errors?.length)console.warn(r.errors);loadUsers();}
   else toast(r.error,'err');
@@ -1919,7 +1986,7 @@ async function loadCourses2(){
 }
 async function saveCourse(){
   const n=document.getElementById('c-name').value.trim(),d=document.getElementById('c-dept').value;
-  if(!n||!d){toast('Name aur dept zaroori','warn');return;}
+  if(!n||!d){toast('Course name and department are required','warn');return;}
   const r=await api({action:'addCourse',courseName:n,courseCode:document.getElementById('c-code').value,deptId:d,totalWeeks:document.getElementById('c-weeks').value,semester:document.getElementById('c-sem').value,description:document.getElementById('c-desc').value});
   if(r.ok){closeModal('mcourse');toast('Course added!','ok');loadCourses2();loadCourses();}
   else toast(r.error,'err');
@@ -2015,7 +2082,7 @@ async function loadLogs(){
 // ════════════════════════════════════════════════════════════
 async function saveGasUrl(){
   const url=document.getElementById('set-gas').value.trim();
-  if(!url){toast('URL enter karo','warn');return;}
+  if(!url){toast('Please enter the URL','warn');return;}
   const st=document.getElementById('set-conn-status');
   st.textContent='Testing…';
   try{
@@ -2258,8 +2325,7 @@ function onRptDeptChange(){
   const cSel=document.getElementById('rpt-course');
   if(!cSel)return;
   while(cSel.options.length>1)cSel.remove(1);
-  const filtered=COURSES.filter(c=>!deptId||c.DeptID===deptId);
-  filtered.forEach(c=>cSel.add(new Option(c.CourseName,c.CourseID)));
+  COURSES.forEach(c=>cSel.add(new Option(c.CourseName,c.CourseID)));
   // Pre-select teacher's course
   if(SESSION?.user?.courseId) cSel.value=SESSION.user.courseId;
 }
@@ -2267,7 +2333,7 @@ function onRptDeptChange(){
 async function submitReport(){
   const wk=document.getElementById('rpt-wk').value;
   const subj=document.getElementById('slot-subject')?.value||'';
-  if(!wk){toast('Week select karo','warn');return;}
+  if(!wk){toast('Please select a week','warn');return;}
   const sel=[...document.querySelectorAll('.lp-btn.lp-sel')].map(x=>x.dataset.l).join(',');
   const u=SESSION.user;
   const btn=document.getElementById('sub-btn');
@@ -2597,9 +2663,9 @@ async function saveSlot(){
   const end=document.getElementById('slot-end').value;
   const subject=document.getElementById('slot-subject').value.trim();
   const mode=document.getElementById('slot-mode').value;
-  if(!day||!start||!end){toast('Day aur time zaroori hai','warn');return;}
-  if(start>=end){toast('End time start se baad hona chahiye','warn');return;}
-  if(!subject){toast('Subject zaroori hai','warn');return;}
+  if(!day||!start||!end){toast('Day and time are required','warn');return;}
+  if(start>=end){toast('End time must be after the start time','warn');return;}
+  if(!subject){toast('Subject is required','warn');return;}
   const lecId=document.getElementById('slot-lec').value||SESSION.user.id;
   const lecObj=USERS_ALL.find(u=>u.UserID===lecId);
   const courseId=document.getElementById('slot-course').value;
@@ -2715,7 +2781,7 @@ window.bootApp=function(){localStorage.setItem('session',JSON.stringify(SESSION)
 // ════════════════════════════════════════════════════════════
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let RC={},INF={},LASTVER=null,SYNCT=null,CUR='',EDIT_ID='',EDIT_PENDING=null,MYRPT=[],AIH=[],AIR=[];
-const RO=new Set(['getDepartments','getCourses','getUsers','getReports','getDashboardStats','getTimetable','getWeeklyPlan','getLogs','getComparison']);
+const RO=new Set(['getDepartments','getCourses','getUsers','getReports','getDashboardStats','getTimetable','getWeeklyPlan','getLogs','getComparison','getClassLogs']);
 async function api(p){
   if(!RO.has(p.action)){const r=await apiRaw(p);RC={};return r;}
   const k=JSON.stringify(p),h=RC[k];
@@ -2738,7 +2804,7 @@ async function doSync(){
 function renderLive(l){
   const el=document.getElementById('live-list');if(!el)return;
   document.getElementById('live-cnt').textContent=l.length+' online';
-  el.innerHTML=l.length?l.map(u=>`<div class="live-u"><span class="live-dot"></span><b>${esc(u.name)}</b><span class="b b-n">${esc(u.role)}</span><span style="color:var(--muted);font-size:11px">${esc(u.deptName||'')}</span></div>`).join(''):'<div style="color:var(--muted);font-size:12px">Is waqt koi live nahi</div>';
+  el.innerHTML=l.length?l.map(u=>`<div class="live-u"><span class="live-dot"></span><b>${esc(u.name)}</b><span class="b b-n">${esc(u.role)}</span><span style="color:var(--muted);font-size:11px">${esc(u.deptName||'')}</span></div>`).join(''):'<div style="color:var(--muted);font-size:12px">No staff online right now</div>';
 }
 // ── Teacher report: free unit/week + edit ──
 function unitNo(s){const m=String(s||'').match(/unit\s*(\d+)/i);return m?+m[1]:0;}
@@ -2770,7 +2836,7 @@ function applyEdit(rp){
   set('rpt-taj-topic',rp.TajweedTopic);set('rpt-taj-status',rp.TajweedStatus);set('rpt-trans',rp.TranslationStatus);set('rpt-surah',rp.SurahPracticed);
   set('rpt-att',rp.Attendance);set('rpt-tot',rp.TotalStudents);set('rpt-und',rp.UnderstandingLevel);
   set('rpt-obs',rp.Observations);set('rpt-issues',rp.Issues);set('rpt-sug',rp.Suggestions);
-  g('sub-btn').innerHTML='💾 Update Report';toast('Edit mode — changes save karke Update dabayen','warn');
+  g('sub-btn').innerHTML='💾 Update Report';toast('Edit mode — update the fields, then press Update Report','warn');
 }
 // ── Admin: plan vs actual ──
 async function loadCompare(){
@@ -2792,7 +2858,7 @@ async function loadCompare(){
     <td style="font-size:12px">${p?esc(p.unit)+' · L'+esc(p.from)+'–'+esc(p.to)+'<div style="color:var(--muted)">'+esc(p.topic)+'</div>':'—'}</td>
     <td style="font-size:12px">${esc(a.unit)} · L${esc(a.from)}–${esc(a.to)}${a.known?'':' <span style="color:var(--muted)">(unit assumed)</span>'}<div style="color:var(--muted)">${esc(a.topic||'')}</div></td>
     <td style="min-width:90px"><b>${x.gap===null?'—':(x.gap>0?'+':'')+x.gap}</b><div style="height:5px;background:var(--border);border-radius:3px;margin-top:4px"><div style="height:5px;width:${w}%;border-radius:3px;background:${x.gap>0?'var(--gold)':'var(--red)'}"></div></div></td>
-    <td><span class="b ${bd[x.state]}">${x.state}</span></td></tr>`;}).join(''):'<tr><td colspan="7"><div class="empty"><div class="ei">📈</div><h3>Koi report nahi</h3></div></td></tr>';
+    <td><span class="b ${bd[x.state]}">${x.state}</span></td></tr>`;}).join(''):'<tr><td colspan="7"><div class="empty"><div class="ei">📈</div><h3>No reports found</h3></div></td></tr>';
 }
 // ── Admin: timetable department → teacher ──
 function renderTTBy(slots){
@@ -2805,7 +2871,7 @@ function aiAdd(cls,html){const l=document.getElementById('ai-log'),d=document.cr
 async function aiSend(){
   const i=document.getElementById('ai-in'),m=i.value.trim();if(!m)return;i.value='';
   const b=document.getElementById('ai-btn');b.disabled=true;
-  aiAdd('ai-u',esc(m));const t=aiAdd('ai-b','<div class="spin spin-d"></div> Soch raha hon…');
+  aiAdd('ai-u',esc(m));const t=aiAdd('ai-b','<div class="spin spin-d"></div> Analyzing data…');
   const r=await apiRaw({action:'aiChat',message:m,history:AIH.slice(-6),week:CW});b.disabled=false;
   if(!r.ok){t.innerHTML='❌ '+esc(r.error||'Error');return;}
   AIH.push({role:'user',text:m},{role:'model',text:r.answer||''});
@@ -2820,12 +2886,12 @@ async function aiSend(){
 }
 function aiImg(i){AIR[i].canvases.forEach((c,j)=>{const a=document.createElement('a');a.href=c.toDataURL('image/png');a.download='chart-'+(j+1)+'.png';a.click();});}
 function aiPdf(i){
-  const r=AIR[i],w=window.open('','_blank');if(!w){toast('Popup allow karen','warn');return;}
+  const r=AIR[i],w=window.open('','_blank');if(!w){toast('Please allow pop-ups','warn');return;}
   w.document.write(`<html><head><title>Isra University — FEQ Report</title><style>body{font-family:Arial,sans-serif;padding:28px;color:#1a2744;line-height:1.6}img{max-width:100%;margin:12px 0}h1{border-bottom:3px solid #c9a84c;padding-bottom:8px}</style></head><body><img src="${LOGO_B64}" style="height:56px;margin:0"><h1>Isra University — Fehm-e-Quran Report</h1><p style="color:#666">${new Date().toLocaleDateString()}</p><p>${esc(r.answer).replace(/\n/g,'<br>')}</p>${r.canvases.map(c=>'<img src="'+c.toDataURL('image/png')+'">').join('')}${r.slides.map(s=>'<h3>'+esc(s.title)+'</h3><ul>'+(s.bullets||[]).map(b=>'<li>'+esc(b)+'</li>').join('')+'</ul>').join('')}</body></html>`);
   w.document.close();setTimeout(()=>w.print(),500);
 }
 function aiSlides(i){
-  if(typeof PptxGenJS==='undefined'){toast('Slides library load nahi hui','err');return;}
+  if(typeof PptxGenJS==='undefined'){toast('Slides library failed to load','err');return;}
   const r=AIR[i],p=new PptxGenJS();let s=p.addSlide();
   s.addText('Isra University — Fehm-e-Quran',{x:.5,y:2,w:9,h:1,fontSize:32,bold:true,color:'1a2744'});s.addText(new Date().toLocaleDateString(),{x:.5,y:3.1,w:9,h:.5,fontSize:16,color:'666666'});
   const sl=r.slides.length?r.slides:[{title:'Summary',bullets:String(r.answer).split(/\n+/).filter(Boolean).slice(0,8)}];
@@ -2833,6 +2899,89 @@ function aiSlides(i){
   r.canvases.forEach(c=>{s=p.addSlide();s.addImage({data:c.toDataURL('image/png'),x:1,y:1,w:8,h:4.4});});
   p.writeFile({fileName:'Isra-FEQ-Report.pptx'});
 }
+
+// ════════════════════════════════════════════════════════════
+//  V3.1 — Class Log (visiting lecturers) & Teaching Hours (admin)
+// ════════════════════════════════════════════════════════════
+let CLOGS=[],CL_EDIT='';
+const ymNow=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');};
+const ymdNow=()=>ymNow()+'-'+String(new Date().getDate()).padStart(2,'0');
+const fmtH=n=>String(+Number(n||0).toFixed(2));
+function fillOpts(id,rows){const el=document.getElementById(id);if(!el)return;const cur=el.value;while(el.options.length>1)el.remove(1);rows.forEach(r=>el.add(new Option(r[1],r[0])));el.value=cur;}
+function statCards(a){return a.map(s=>`<div class="sc"><div class="sc-icon">${s[0]}</div><div class="sc-lbl">${s[1]}</div><div class="sc-val">${s[2]}</div></div>`).join('');}
+function calcClassHours(){
+  const s=document.getElementById('cl-start').value,e=document.getElementById('cl-end').value;
+  if(!s||!e)return;const m=t=>+t.slice(0,2)*60+ +t.slice(3,5),d=m(e)-m(s);
+  if(d>0)document.getElementById('cl-hours').value=+(d/60).toFixed(2);
+}
+function resetClassForm(){
+  CL_EDIT='';const g=id=>document.getElementById(id);
+  ['cl-start','cl-end','cl-hours','cl-sec','cl-topic','cl-notes'].forEach(id=>g(id).value='');
+  g('cl-date').value=ymdNow();g('cl-year').value='';g('cl-sem').value='';
+  g('cl-form-title').textContent='Add Class';g('cl-save').textContent='Save Class';
+}
+async function loadClassLog(){
+  const g=id=>document.getElementById(id),u=SESSION.user;
+  fillOpts('cl-dept',DEPTS.map(d=>[d.DeptID,d.DeptName]));fillOpts('cl-course',COURSES.map(c=>[c.CourseID,c.CourseName]));fillOpts('clf-dept',DEPTS.map(d=>[d.DeptID,d.DeptName]));
+  if(!g('cl-date').value)g('cl-date').value=ymdNow();
+  g('cl-date').max=ymdNow();
+  if(!g('cl-dept').value&&u.deptId&&!CL_EDIT)g('cl-dept').value=u.deptId;
+  if(!g('clf-month').value)g('clf-month').value=ymNow();
+  const r=await api({action:'getClassLogs',month:g('clf-month').value,deptId:g('clf-dept').value,studentYear:g('clf-year').value,semester:g('clf-sem').value});
+  if(!r.ok){toast(r.error||'Failed to load class log','err');return;}
+  CLOGS=r.logs||[];const s=r.summary||{};
+  g('cl-stats').innerHTML=statCards([['📚','Classes',s.totalClasses||0],['⏱️','Total Hours',fmtH(s.totalHours)],['📅','Teaching Days',(s.byLecturer&&s.byLecturer[0]?s.byLecturer[0].days:0)]]);
+  g('cl-tbl').innerHTML=CLOGS.length?CLOGS.map(o=>`<tr>
+    <td><strong>${esc(o.ClassDate)}</strong></td>
+    <td style="font-family:monospace;font-size:12px">${o.StartTime&&o.EndTime?esc(o.StartTime)+'–'+esc(o.EndTime):'—'}</td>
+    <td><strong>${fmtH(o.Hours)} h</strong></td>
+    <td style="font-size:12px">${esc(o.DeptName||'—')}</td><td style="font-size:12px">${esc(o.CourseName||'—')}</td>
+    <td style="font-size:12px">${esc(o.StudentYear)}<br>${esc(o.Semester)}</td>
+    <td style="font-size:12px;color:var(--muted)">${esc(o.Topic||'—')}</td>
+    <td style="display:flex;gap:4px"><button class="btn btn-out btn-xs" onclick="editClassLog('${esc(o.LogID)}')">Edit</button><button class="btn btn-del btn-xs" onclick="delClassLog('${esc(o.LogID)}')">Delete</button></td>
+  </tr>`).join(''):'<tr><td colspan="8"><div class="empty"><div class="ei">⏱️</div><h3>No classes logged for this period</h3></div></td></tr>';
+}
+async function saveClassLog(){
+  const g=id=>document.getElementById(id);
+  if(!g('cl-date').value||!g('cl-dept').value||!g('cl-year').value||!g('cl-sem').value){toast('Date, department, year and semester are required','warn');return;}
+  if(!(parseFloat(g('cl-hours').value)>0)){toast('Please enter the class hours','warn');return;}
+  const btn=g('cl-save');btn.disabled=true;
+  const r=await api({action:CL_EDIT?'updateClassLog':'addClassLog',logId:CL_EDIT,classDate:g('cl-date').value,startTime:g('cl-start').value,endTime:g('cl-end').value,hours:g('cl-hours').value,deptId:g('cl-dept').value,courseId:g('cl-course').value,studentYear:g('cl-year').value,semester:g('cl-sem').value,section:g('cl-sec').value,topic:g('cl-topic').value,notes:g('cl-notes').value});
+  btn.disabled=false;
+  if(!r.ok){toast(r.error||'Save failed','err');return;}
+  toast(CL_EDIT?'Class updated':'Class saved','ok');
+  const keep={d:g('cl-dept').value,c:g('cl-course').value,y:g('cl-year').value,s:g('cl-sem').value,sec:g('cl-sec').value};
+  resetClassForm();g('cl-dept').value=keep.d;g('cl-course').value=keep.c;g('cl-year').value=keep.y;g('cl-sem').value=keep.s;g('cl-sec').value=keep.sec;
+  loadClassLog();
+}
+function editClassLog(id){
+  const o=CLOGS.find(x=>x.LogID===id);if(!o)return;CL_EDIT=id;const g=id2=>document.getElementById(id2);
+  g('cl-date').value=o.ClassDate;g('cl-start').value=o.StartTime||'';g('cl-end').value=o.EndTime||'';g('cl-hours').value=o.Hours;
+  g('cl-dept').value=o.DeptID;g('cl-course').value=o.CourseID||'';g('cl-year').value=o.StudentYear;g('cl-sem').value=o.Semester;
+  g('cl-sec').value=o.Section||'';g('cl-topic').value=o.Topic||'';g('cl-notes').value=o.Notes||'';
+  g('cl-form-title').textContent='Edit Class';g('cl-save').textContent='Update Class';
+  g('cl-form-card').scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function delClassLog(id){
+  if(!confirm('Delete this class entry?'))return;
+  const r=await api({action:'deleteClassLog',logId:id});
+  if(r.ok){toast('Class entry deleted','ok');if(CL_EDIT===id)resetClassForm();loadClassLog();}else toast(r.error||'Delete failed','err');
+}
+// ── Admin: monthly teaching hours ──
+async function loadHours(){
+  const g=id=>document.getElementById(id);
+  if(!USERS_ALL.length){const u=await api({action:'getUsers'});if(u.ok)USERS_ALL=u.users;}
+  fillOpts('hf-lec',USERS_ALL.filter(u=>u.Role==='teacher').map(u=>[u.UserID,u.FullName]));
+  fillOpts('hf-dept',DEPTS.map(d=>[d.DeptID,d.DeptName]));
+  if(g('hf-month').value===''&&!g('hf-month').dataset.init){g('hf-month').value=ymNow();g('hf-month').dataset.init='1';}
+  const r=await api({action:'getClassLogs',month:g('hf-month').value,lecturerId:g('hf-lec').value,deptId:g('hf-dept').value,studentYear:g('hf-year').value,semester:g('hf-sem').value});
+  if(!r.ok){toast(r.error||'Failed to load teaching hours','err');return;}
+  const s=r.summary,L=r.logs||[];
+  g('hrs-stats').innerHTML=statCards([['📚','Total Classes',s.totalClasses],['⏱️','Total Hours',fmtH(s.totalHours)],['👩‍🏫','Lecturers',s.lecturers]]);
+  g('hrs-sum-tbl').innerHTML=s.byLecturer.length?s.byLecturer.map(x=>`<tr><td><a style="cursor:pointer;color:var(--teal);font-weight:600" onclick="hoursFilterLec('${esc(x.lecturerId)}')">${esc(x.name)}</a></td><td>${x.classes}</td><td><strong>${fmtH(x.hours)} h</strong></td><td>${x.days}</td></tr>`).join('')+`<tr style="background:var(--bg)"><td><strong>Total</strong></td><td><strong>${s.totalClasses}</strong></td><td><strong>${fmtH(s.totalHours)} h</strong></td><td></td></tr>`:'<tr><td colspan="4"><div class="empty"><div class="ei">⏱️</div><h3>No classes logged for this period</h3></div></td></tr>';
+  g('hrs-det-tbl').innerHTML=L.map(o=>`<tr><td><strong>${esc(o.ClassDate)}</strong></td><td>${esc(o.LecturerName)}</td><td style="font-family:monospace;font-size:12px">${o.StartTime&&o.EndTime?esc(o.StartTime)+'–'+esc(o.EndTime):'—'}</td><td><strong>${fmtH(o.Hours)} h</strong></td><td style="font-size:12px">${esc(o.DeptName||'—')}</td><td style="font-size:12px">${esc(o.CourseName||'—')}</td><td style="font-size:12px">${esc(o.StudentYear)} · ${esc(o.Semester)}</td><td style="font-size:12px;color:var(--muted)">${esc(o.Topic||'—')}</td></tr>`).join('');
+}
+function hoursFilterLec(id){document.getElementById('hf-lec').value=id;loadHours();}
 </script>
 </body>
 </html>
