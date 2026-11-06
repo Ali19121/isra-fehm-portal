@@ -812,6 +812,7 @@ function getTimetable(caller, body) {
   const data    = sheet.getDataRange().getValues();
   const headers = data[0];
   let slots = data.slice(1).map(r => rowToObj(headers, r)).filter(s => s.SlotID);
+  slots.forEach(s => { s.StartTime = hmTz(s.StartTime, ss); s.EndTime = hmTz(s.EndTime, ss); });   // time cells -> 'HH:mm'
 
   // Lecturers see only their own slots
   if (caller.role === 'teacher') {
@@ -870,6 +871,8 @@ function addTimetableSlot(caller, body) {
     now(), now()
   ]);
 
+  const tH = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0], tr = sheet.getLastRow();   // keep times as plain text
+  [['StartTime', body.startTime], ['EndTime', body.endTime]].forEach(([c, v]) => sheet.getRange(tr, tH.indexOf(c) + 1).setNumberFormat('@').setValue(v || ''));
   writeLog(ss, caller.id, caller.username, caller.role, 'Add Timetable Slot',
     `${body.lecturerName||caller.username} — ${body.day} ${body.startTime}–${body.endTime}`);
   return { ok:true, slotId };
@@ -890,7 +893,7 @@ function updateTimetableSlot(caller, body) {
         return { ok:false, error:'You can only edit your own slots.' };
       }
       const row = i + 1;
-      const setCol = (col, val) => { if (val !== undefined) sheet.getRange(row, headers.indexOf(col)+1).setValue(val); };
+      const setCol = (col, val) => { if (val === undefined) return; const cell = sheet.getRange(row, headers.indexOf(col)+1); if (col === 'StartTime' || col === 'EndTime') cell.setNumberFormat('@'); cell.setValue(val); };
       setCol('LecturerName', body.lecturerName);
       setCol('DeptID',       body.deptId);
       setCol('DeptName',     body.deptName);
@@ -1354,4 +1357,11 @@ function classHoursSummary() {
     s.classes++; s.hours = Math.round((s.hours + o.Hours) * 100) / 100;
   });
   return Object.values(g).slice(-400);
+}
+
+// Normalise a time cell (Date object or text) to 'HH:mm' — fixes values like 1899-12-30T04:01:48Z
+function hmTz(v, ss) {
+  if (v instanceof Date) return Utilities.formatDate(v, ss.getSpreadsheetTimeZone(), 'HH:mm');
+  const s = String(v || ''), m = /^(\d{1,2}):(\d{2})/.exec(s);
+  return m ? ('0' + m[1]).slice(-2) + ':' + m[2] : s;
 }
