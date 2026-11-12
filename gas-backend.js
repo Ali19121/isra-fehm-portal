@@ -118,6 +118,15 @@ function doPost(e) {
       case 'updateTimetableSlot': return respond(updateTimetableSlot(caller, body));
       case 'deleteTimetableSlot': return respond(deleteTimetableSlot(caller, body));
 
+      case 'getMe':               return respond(getMe(caller));
+      case 'setTeacherCourses':   return respond(setTeacherCourses(caller, body));
+      case 'getCourseContent':    return respond(getCourseContent(caller, body));
+      case 'saveCourseContent':   return respond(saveCourseContent(caller, body));
+      case 'deleteCourseContent': return respond(deleteCourseContent(caller, body));
+      case 'getCourseUnits':      return respond(getCourseUnits(caller, body));
+      case 'saveCourseUnit':      return respond(saveCourseUnit(caller, body));
+      case 'deleteCourseUnit':    return respond(deleteCourseUnit(caller, body));
+      case 'setCoordinatorTeachers': return respond(setCoordinatorTeachers(caller, body));
       case 'addClassLog':         return respond(addClassLog(caller, body));
       case 'updateClassLog':      return respond(updateClassLog(caller, body));
       case 'deleteClassLog':      return respond(deleteClassLog(caller, body));
@@ -160,7 +169,7 @@ function setupSheets() {
     [SH.USERS]: [
       'UserID','FullName','Username','PasswordHash','Role',
       'DepartmentID','CourseID','Section','CoordinatorID',
-      'Status','Email','CreatedAt','UpdatedAt','LastSeen'
+      'Status','Email','CreatedAt','UpdatedAt','LastSeen','CourseIDs'
     ],
     [SH.DEPARTMENTS]: [
       'DeptID','DeptName','DeptCode','HeadName','Status','CreatedAt'
@@ -185,7 +194,7 @@ function setupSheets() {
       'Attendance','TotalStudents','UnderstandingLevel',
       'Observations','Issues','Suggestions',
       'SubmittedAt','Status','CoordRemarks','CoordID','ApprovedAt',
-      'BookUnit','StudentYear','Semester','UpdatedAt'
+      'BookUnit','StudentYear','Semester','UpdatedAt','TopicIDs','TopicsCovered'
     ],
     [SH.OBSERVATIONS]: [
       'ObsID','ReportID','LecturerID','Type','Description','CreatedAt'
@@ -199,7 +208,7 @@ function setupSheets() {
     [SH.TIMETABLE]: [
       'SlotID','LecturerID','LecturerName','DeptID','DeptName',
       'CourseID','CourseName','Section','Subject',
-      'Day','StartTime','EndTime','Mode','Room','Link','Notes','CreatedAt','UpdatedAt'
+      'Day','StartTime','EndTime','Mode','Room','Link','Notes','CreatedAt','UpdatedAt','EffectiveFrom','EffectiveTo'
     ],
   };
 
@@ -234,8 +243,8 @@ function seedInitialData() {
   // Seed Courses
   const courseSheet = ss.getSheetByName(SH.COURSES);
   if (courseSheet.getLastRow() <= 1) {
-    courseSheet.appendRow(['CRS001','Fehm-e-Quran Course 1','FEQ-1','DEPT001',16,'Semester 1','Understanding of Holy Quran - 1','active', now()]);
-    courseSheet.appendRow(['CRS002','Fehm-e-Quran Course 2','FEQ-2','DEPT001',16,'Semester 2','Understanding of Holy Quran - 2','active', now()]);
+    courseSheet.appendRow(['CRS001','Fehm-ul-Quran – I','FEQ-1','DEPT001',16,'Semester 1','Understanding of Holy Quran - 1','active', now()]);
+    courseSheet.appendRow(['CRS002','Fehm-ul-Quran – II','FEQ-2','DEPT001',16,'Semester 2','Understanding of Holy Quran - 2','active', now()]);
   }
 
   // Seed Weekly Plan Course 1
@@ -357,6 +366,7 @@ function handleLogin(body) {
       section:    row[idx.section],
       coordId:    row[idx.coordId],
       email:      row[idx.email],
+      ...parseCourseIds(headers.indexOf('CourseIDs') >= 0 ? row[headers.indexOf('CourseIDs')] : ''),
     }
   };
 }
@@ -533,11 +543,13 @@ function changePassword(caller, body) {
   const sheet = ss.getSheetByName(SH.USERS);
   const data  = sheet.getDataRange().getValues();
 
-  const targetId = caller.role === 'admin' ? body.userId : caller.id;
+  if (!body.newPassword || String(body.newPassword).length < 8) return { ok:false, error:'Password must be at least 8 characters.' };
+  const adminReset = caller.role === 'admin' && body.userId && body.userId !== caller.id;
+  const targetId = adminReset ? body.userId : caller.id;
 
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] === targetId) {
-      if (caller.role !== 'admin') {
+      if (!adminReset) {
         // Verify old password
         if (!verifyPassword(body.oldPassword, data[i][3].toString())) {
           return { ok:false, error:'Current password incorrect' };
@@ -625,7 +637,7 @@ function addCourse(caller, body) {
   const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName(SH.COURSES);
   const cId   = 'CRS' + String(Date.now()).slice(-6);
-  sheet.appendRow([cId, body.courseName, body.courseCode||'', body.deptId,
+  sheet.appendRow([cId, body.courseName, body.courseCode||'', body.deptId||'',
     body.totalWeeks||16, body.semester||'', body.description||'', 'active', now()]);
   return { ok:true, courseId: cId };
 }
@@ -673,6 +685,9 @@ function getReports(caller, body) {
   if (body.deptId)     reports = reports.filter(r => r.DeptID      === body.deptId);
   if (body.weekNum)    reports = reports.filter(r => String(r.WeekNum) === String(body.weekNum));
   if (body.status)     reports = reports.filter(r => r.Status      === body.status);
+  if (body.lecturerId) reports = reports.filter(r => r.LecturerID  === body.lecturerId);
+  if (body.studentYear) reports = reports.filter(r => r.StudentYear === body.studentYear);
+  if (body.semester)   reports = reports.filter(r => r.Semester    === body.semester);
 
   // Enrich with lecturer names
   const uSheet  = ss.getSheetByName(SH.USERS);
@@ -812,7 +827,7 @@ function getTimetable(caller, body) {
   const data    = sheet.getDataRange().getValues();
   const headers = data[0];
   let slots = data.slice(1).map(r => rowToObj(headers, r)).filter(s => s.SlotID);
-  slots.forEach(s => { s.StartTime = hmTz(s.StartTime, ss); s.EndTime = hmTz(s.EndTime, ss); });   // time cells -> 'HH:mm'
+  slots.forEach(s => { s.StartTime = hmTz(s.StartTime, ss); s.EndTime = hmTz(s.EndTime, ss); s.EffectiveFrom = ymdTz(s.EffectiveFrom, ss); s.EffectiveTo = ymdTz(s.EffectiveTo, ss); });   // time cells -> 'HH:mm'
 
   // Lecturers see only their own slots
   if (caller.role === 'teacher') {
@@ -835,12 +850,14 @@ function getTimetable(caller, body) {
   if (body.day)         slots = slots.filter(s => s.Day        === body.day);
   if (body.mode)        slots = slots.filter(s => s.Mode       === body.mode);
   if (body.lecturerId)  slots = slots.filter(s => s.LecturerID === body.lecturerId);
+  if (body.activeOn)    slots = slots.filter(s => (!s.EffectiveFrom || s.EffectiveFrom <= body.activeOn) && (!s.EffectiveTo || s.EffectiveTo >= body.activeOn));
 
   return { ok:true, slots };
 }
 
 function addTimetableSlot(caller, body) {
   if (!['admin','teacher','coordinator'].includes(caller.role)) return { ok:false, error:'Forbidden' };
+  if (body.effectiveFrom && body.effectiveTo && body.effectiveTo < body.effectiveFrom) return { ok:false, error:'End date cannot be before the W.E.F. date.' };
   // Teachers can only add for themselves
   if (caller.role === 'teacher' && body.lecturerId !== caller.id) {
     body.lecturerId = caller.id;
@@ -850,6 +867,7 @@ function addTimetableSlot(caller, body) {
   const sheet = ss.getSheetByName(SH.TIMETABLE);
   if (!sheet) return { ok:false, error:'Timetable sheet not found. Run setupSheets() first.' };
 
+  if (caller.role === 'teacher' && !courseAllowed(ss, caller.id, body.courseId)) return { ok:false, error:'This course is not assigned to you. Please contact the administrator.' };
   const slotId = 'SLT' + String(Date.now()).slice(-8);
   sheet.appendRow([
     slotId,
@@ -871,17 +889,19 @@ function addTimetableSlot(caller, body) {
     now(), now()
   ]);
 
-  const tH = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0], tr = sheet.getLastRow();   // keep times as plain text
-  [['StartTime', body.startTime], ['EndTime', body.endTime]].forEach(([c, v]) => sheet.getRange(tr, tH.indexOf(c) + 1).setNumberFormat('@').setValue(v || ''));
+  const tH = ensureCols(sheet, TT_NEW_COLS), tr = sheet.getLastRow();   // keep times/dates as plain text
+  [['StartTime', body.startTime], ['EndTime', body.endTime], ['EffectiveFrom', body.effectiveFrom], ['EffectiveTo', body.effectiveTo]].forEach(([c, v]) => sheet.getRange(tr, tH.indexOf(c) + 1).setNumberFormat('@').setValue(v || ''));
   writeLog(ss, caller.id, caller.username, caller.role, 'Add Timetable Slot',
     `${body.lecturerName||caller.username} — ${body.day} ${body.startTime}–${body.endTime}`);
   return { ok:true, slotId };
 }
 
 function updateTimetableSlot(caller, body) {
+  if (body.effectiveFrom && body.effectiveTo && body.effectiveTo < body.effectiveFrom) return { ok:false, error:'End date cannot be before the W.E.F. date.' };
   const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName(SH.TIMETABLE);
   if (!sheet) return { ok:false, error:'Timetable sheet not found.' };
+  ensureCols(sheet, TT_NEW_COLS);
 
   const data    = sheet.getDataRange().getValues();
   const headers = data[0];
@@ -893,7 +913,7 @@ function updateTimetableSlot(caller, body) {
         return { ok:false, error:'You can only edit your own slots.' };
       }
       const row = i + 1;
-      const setCol = (col, val) => { if (val === undefined) return; const cell = sheet.getRange(row, headers.indexOf(col)+1); if (col === 'StartTime' || col === 'EndTime') cell.setNumberFormat('@'); cell.setValue(val); };
+      const setCol = (col, val) => { if (val === undefined) return; const cell = sheet.getRange(row, headers.indexOf(col)+1); if (['StartTime','EndTime','EffectiveFrom','EffectiveTo'].includes(col)) cell.setNumberFormat('@'); cell.setValue(val); };
       setCol('LecturerName', body.lecturerName);
       setCol('DeptID',       body.deptId);
       setCol('DeptName',     body.deptName);
@@ -904,6 +924,8 @@ function updateTimetableSlot(caller, body) {
       setCol('Day',          body.day);
       setCol('StartTime',    body.startTime);
       setCol('EndTime',      body.endTime);
+      setCol('EffectiveFrom', body.effectiveFrom);
+      setCol('EffectiveTo',   body.effectiveTo);
       setCol('Mode',         body.mode);
       setCol('Room',         body.room);
       setCol('Link',         body.link);
@@ -997,7 +1019,7 @@ function writeLog(ss, userId, username, role, action, details) {
 // ============================================================
 // AI model fallback chain (fast first). Override with Script Property GEMINI_MODELS (comma separated).
 const AI_MODELS = ['gemini-3-flash-preview','gemini-3.1-flash-lite','gemini-flash-latest','gemini-flash-lite-latest'];
-const NEW_COLS = { REPORTS:['BookUnit','StudentYear','Semester','UpdatedAt'], USERS:['LastSeen'] };
+const NEW_COLS = { REPORTS:['BookUnit','StudentYear','Semester','UpdatedAt','TopicIDs','TopicsCovered'], USERS:['LastSeen','CourseIDs'] };
 
 function ensureCols(sheet, cols) {
   const lc = Math.max(sheet.getLastColumn(), 1);
@@ -1015,6 +1037,10 @@ function migrateSheets() {
   ensureCols(ss.getSheetByName(SH.REPORTS), NEW_COLS.REPORTS);
   ensureCols(ss.getSheetByName(SH.USERS),   NEW_COLS.USERS);
   clSheet(ss);   // creates the ClassLogs sheet if it does not exist
+  cuSheet(ss);   // creates the CourseUnits sheet if it does not exist
+  ensureCols(ss.getSheetByName(SH.TIMETABLE), TT_NEW_COLS);
+  migrateCourses();
+  seedCourseContent();
   console.log('✅ Migration done — existing data untouched.');
 }
 
@@ -1063,6 +1089,9 @@ function submitReport(caller, body) {
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sh = ss.getSheetByName(SH.REPORTS);
     const h  = ensureCols(sh, NEW_COLS.REPORTS);
+    if (!String(body.lessonsFrom || '').trim() || !String(body.lessonsTo || '').trim()) return { ok:false, error:'Please select the From and To range covered this week.' };
+    if (Number(body.lessonsTo) < Number(body.lessonsFrom)) return { ok:false, error:'The "To" value cannot be before the "From" value.' };
+    if (!courseAllowed(ss, caller.id, body.courseId)) return { ok:false, error:'This course is not assigned to you. Please contact the administrator.' };
     const data = sh.getDataRange().getValues();
     const ix = n => h.indexOf(n);
     let row = -1;
@@ -1084,7 +1113,8 @@ function submitReport(caller, body) {
       TranslationStatus:body.translationStatus||'', SurahPracticed:body.surahPracticed||'', Attendance:body.attendance||'',
       TotalStudents:body.totalStudents||'', UnderstandingLevel:body.understandingLevel||'', Observations:body.observations||'',
       Issues:body.issues||'', Suggestions:body.suggestions||'', BookUnit:body.bookUnit||'', StudentYear:body.studentYear||'',
-      Semester:body.semester||'', UpdatedAt:now(), Status:'pending'
+      Semester:body.semester||'', UpdatedAt:now(), Status:'pending',
+      TopicIDs:String(body.topicIds||'').slice(0, 800), TopicsCovered:String(body.topicsText||'').slice(0, 1500)
     };
     let id;
     if (row > 0) {
@@ -1272,6 +1302,7 @@ function addClassLog(caller, body) {
   try {
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sh = clSheet(ss);
     const data = sh.getDataRange().getValues(), h = data[0], rec = p.rec;
+    if (caller.role === 'teacher' && !courseAllowed(ss, caller.id, rec.CourseID)) return { ok:false, error:'This course is not assigned to you. Please contact the administrator.' };
     if (rec.StartTime && rec.EndTime && data.slice(1).some(r => { const o = clRow(h, r);
         return o.LecturerID === lecId && o.ClassDate === rec.ClassDate && o.StartTime === rec.StartTime && o.EndTime === rec.EndTime; }))
       return { ok:false, error:'A class with the same date and time is already logged.' };
@@ -1293,6 +1324,7 @@ function updateClassLog(caller, body) {
     const i = data.findIndex((r, k) => k > 0 && r[h.indexOf('LogID')] === body.logId);
     if (i < 0) return { ok:false, error:'Class entry not found.' };
     const old = rowToObj(h, data[i]);
+    if (caller.role === 'teacher' && !courseAllowed(ss, caller.id, p.rec.CourseID)) return { ok:false, error:'This course is not assigned to you. Please contact the administrator.' };
     if (caller.role === 'teacher' && old.LecturerID !== caller.id) return { ok:false, error:'You can only edit your own entries.' };
     const row = Object.assign(old, p.rec, { DeptName:getDeptName(ss, p.rec.DeptID), CourseName:getCourseName(ss, p.rec.CourseID), UpdatedAt:now() });
     clWrite(sh, h, i + 1, row);
@@ -1364,4 +1396,229 @@ function hmTz(v, ss) {
   if (v instanceof Date) return Utilities.formatDate(v, ss.getSpreadsheetTimeZone(), 'HH:mm');
   const s = String(v || ''), m = /^(\d{1,2}):(\d{2})/.exec(s);
   return m ? ('0' + m[1]).slice(-2) + ':' + m[2] : s;
+}
+
+// ============================================================
+//  V3.2 — courses, unit headings, timetable dates, coordinator assignment
+// ============================================================
+const TT_NEW_COLS = ['EffectiveFrom','EffectiveTo'];
+function ymdTz(v, ss) {
+  if (v instanceof Date) return Utilities.formatDate(v, ss.getSpreadsheetTimeZone(), 'yyyy-MM-dd');
+  return String(v || '').slice(0, 10);
+}
+
+// Run once (also called by migrateSheets). Renames only the two default course names; adds the other two courses.
+function migrateCourses() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sh = ss.getSheetByName(SH.COURSES);
+  const d = sh.getDataRange().getValues(), h = d[0], iId = h.indexOf('CourseID'), iName = h.indexOf('CourseName');
+  const renames = { CRS001:['Fehm-e-Quran Course 1','Fehm-ul-Quran – I'], CRS002:['Fehm-e-Quran Course 2','Fehm-ul-Quran – II'] };
+  d.forEach((r, i) => { const rn = renames[r[iId]]; if (i > 0 && rn && String(r[iName]).trim() === rn[0]) sh.getRange(i + 1, iName + 1).setValue(rn[1]); });
+  const have = d.slice(1).map(r => r[iId]);
+  [['CRS003','Islamiat','ISL'], ['CRS004','Other Tajweed Courses','TJW']].forEach(([id, name, code]) => {
+    if (have.includes(id)) return;
+    const o = { CourseID:id, CourseName:name, CourseCode:code, DeptID:'', TotalWeeks:16, Semester:'', Description:'', Status:'active', CreatedAt:now() };
+    sh.appendRow(h.map(c => o[c] !== undefined ? o[c] : ''));
+  });
+  console.log('✅ Courses ready.');
+}
+
+// ── Course unit headings (new sheet "CourseUnits") ──
+const CU_HEADERS = ['UnitID','CourseID','UnitNo','Heading','LessonsCount','Status','CreatedAt','UpdatedAt'];
+function cuSheet(ss) {
+  let sh = ss.getSheetByName('CourseUnits');
+  if (!sh) {
+    sh = ss.insertSheet('CourseUnits'); sh.appendRow(CU_HEADERS);
+    sh.getRange(1, 1, 1, CU_HEADERS.length).setFontWeight('bold').setBackground('#1a2744').setFontColor('#ffffff'); sh.setFrozenRows(1);
+  }
+  return sh;
+}
+function getCourseUnits(caller, body) {
+  const sh = cuSheet(SpreadsheetApp.openById(SPREADSHEET_ID)), d = sh.getDataRange().getValues(), h = d[0];
+  let u = d.slice(1).map(r => rowToObj(h, r)).filter(o => o.UnitID && o.Status !== 'inactive');
+  if (body && body.courseId) u = u.filter(o => o.CourseID === body.courseId);
+  u.forEach(o => { o.UnitNo = Number(o.UnitNo); o.LessonsCount = Number(o.LessonsCount) || 0; });
+  u.sort((a, b) => String(a.CourseID).localeCompare(String(b.CourseID)) || a.UnitNo - b.UnitNo);
+  return { ok:true, units:u };
+}
+function saveCourseUnit(caller, body) {
+  if (caller.role !== 'admin') return { ok:false, error:'Forbidden' };
+  const no = parseInt(body.unitNo, 10), heading = String(body.heading || '').trim().slice(0, 150), les = parseInt(body.lessons, 10) || 0;
+  if (!body.courseId) return { ok:false, error:'Course is required.' };
+  if (!(no >= 1 && no <= 99)) return { ok:false, error:'Unit number must be between 1 and 99.' };
+  if (!heading) return { ok:false, error:'Unit heading is required.' };
+  if (les < 0 || les > 200) return { ok:false, error:'Lessons must be between 0 and 200.' };
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sh = cuSheet(ss), d = sh.getDataRange().getValues(), h = d[0];
+    const ix = n => h.indexOf(n);
+    if (d.some((r, i) => i > 0 && r[ix('CourseID')] === body.courseId && Number(r[ix('UnitNo')]) === no && r[ix('UnitID')] !== body.unitId))
+      return { ok:false, error:'Unit ' + no + ' already exists for this course.' };
+    if (body.unitId) {
+      const i = d.findIndex((r, k) => k > 0 && r[ix('UnitID')] === body.unitId);
+      if (i < 0) return { ok:false, error:'Unit not found.' };
+      const o = rowToObj(h, d[i]); Object.assign(o, { UnitNo:no, Heading:heading, LessonsCount:les, UpdatedAt:now() });
+      sh.getRange(i + 1, 1, 1, h.length).setValues([h.map(c => o[c] !== undefined ? o[c] : '')]);
+    } else {
+      const o = { UnitID:'UN' + String(Date.now()).slice(-8), CourseID:body.courseId, UnitNo:no, Heading:heading, LessonsCount:les, Status:'active', CreatedAt:now(), UpdatedAt:now() };
+      sh.appendRow(h.map(c => o[c] !== undefined ? o[c] : ''));
+    }
+    writeLog(ss, caller.id, caller.username, caller.role, 'Save Course Unit', body.courseId + ' · Unit ' + no + ': ' + heading);
+    return { ok:true };
+  } finally { lock.releaseLock(); }
+}
+function deleteCourseUnit(caller, body) {
+  if (caller.role !== 'admin') return { ok:false, error:'Forbidden' };
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sh = cuSheet(ss), d = sh.getDataRange().getValues(), i = d.findIndex((r, k) => k > 0 && r[0] === body.unitId);
+  if (i < 0) return { ok:false, error:'Unit not found.' };
+  sh.deleteRow(i + 1);
+  writeLog(ss, caller.id, caller.username, caller.role, 'Delete Course Unit', body.unitId);
+  return { ok:true };
+}
+
+// ── Coordinator rights, lecturer-wise (uses Users.CoordinatorID) ──
+function setCoordinatorTeachers(caller, body) {
+  if (caller.role !== 'admin') return { ok:false, error:'Forbidden' };
+  const cid = body.coordinatorId; if (!cid) return { ok:false, error:'Coordinator is required.' };
+  const ids = new Set((body.teacherIds || []).map(String));
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sh = ss.getSheetByName(SH.USERS), d = sh.getDataRange().getValues(), h = d[0];
+    const iId = h.indexOf('UserID'), iRole = h.indexOf('Role'), iCo = h.indexOf('CoordinatorID');
+    if (!d.slice(1).some(r => r[iId] === cid && r[iRole] === 'coordinator')) return { ok:false, error:'Coordinator not found.' };
+    let added = 0, removed = 0; const col = [];
+    for (let i = 1; i < d.length; i++) {
+      const r = d[i]; let v = r[iCo];
+      if (r[iRole] === 'teacher') {
+        if (ids.has(String(r[iId]))) { if (v !== cid) { v = cid; added++; } }
+        else if (v === cid) { v = ''; removed++; }
+      }
+      col.push([v === undefined ? '' : v]);
+    }
+    if (col.length) sh.getRange(2, iCo + 1, col.length, 1).setValues(col);
+    writeLog(ss, caller.id, caller.username, caller.role, 'Assign Lecturers', `${cid}: +${added} / -${removed}`);
+    return { ok:true, added, removed };
+  } finally { lock.releaseLock(); }
+}
+
+const ISLAMIAT_CONTENT = [["Six Articles of Faith & Five Pillars of Islam", "Six Articles of Faith; Five Pillars of Islam", 1], ["Seerah of the Prophet (SAWS)", "Lessons of Modesty, Compassion & Empathy, Sincerity, Truthfulness & Honesty, Courage & Tawakkul, Tolerance & Patience, Loyalty, Fairness & Justice, Forgiveness, Gratefulness & Humility", 1], ["Major Events Before Prophethood", "Major Events Before Prophethood", 3], ["Makki Period", "Early Revelations, Secret Call to Islam & Early Muslims", 2], ["Makki Period", "Open Call to Islam & Persecution by Quraish", 3], ["Makki Period", "Reaching Out Beyond Makkah Leading to Hijrah", 2], ["Madani Period", "Establishing Brotherhood Among Muslims & Contract with Non-Muslims – Handling Challenges & Hostility of Enemies Leading to Wars", 5], ["Madani Period", "Truce of Hudaybiyyah Leading to Conquest of Makkah", 2], ["Madani Period", "People Entering Islam in Large Numbers", 2], ["Basic Concepts of the Glorious Quran", "Faith & Piety – Ayat Al Birr, Surah Al Baqarah (002:177)", 1], ["Basic Concepts of the Glorious Quran", "Essence of Teachings – Surah Luqman (031:012–019)", 1], ["Basic Concepts of the Glorious Quran", "Manners & Ethics – Surah Al Hujuraat (049:001–013)", 1], ["Basic Concepts of the Glorious Quran", "Characteristics of Believers – Surah Al Muminoon (023:001–011)", 1], ["Basics of Sunnah & Hadith", "Selected Ahadith for Personal & Professional Grooming", 1], ["Islamic Teachings in Professional Practice", "Integrity, Dedication & Service", 2], ["Broader Concepts of Islam", "Individual Piety, Social System, Economic System, Prohibition of Riba, Political Governance & Legislation", 2], ["Islamic History & Civilization", "Islamic History & Impact on Global Civilization", 2]];
+const FEQ1_PLAN = [[1, "Vol. 1 – Unit 1", "Nouns, Proper Nouns, Word Opposites, Masculine & Feminine", "Lessons 1–4"], [2, "Unit 1", "Nouns, Proper Nouns, Word Opposites, Masculine & Feminine; Asma Ul Husna", "Lessons 5–8; Lesson 9"], [3, "Unit 1", "Singulars & Plurals; Use of و (And); Practice of Word Meanings", "Lessons 10–11; Lesson 12; Lessons 13–14"], [4, "Unit 1", "Demonstrative Nouns (أسماء الإشارة); Laam for Emphasis (لام التأكيد); Superlative Degree of Adjective with الف", "Lessons 15–17; Lesson 18; Lesson 19"], [5, "Vol. 1 – Unit 2", "Emphatic Particle إن; Prepositions: ل، في، على", "Lessons 2–4"], [6, "Unit 2", "Prepositions: من، إلى، ب، لا", "Lessons 5–8"], [7, "Unit 2", "Prepositions: إلا، واو القسم، أن، كان، يا", "Lessons 9–13"], [8, "Unit 3", "Adjective Compounds (صفة وموصوف); Possessive Construction", "Lessons 1–3"], [9, "Unit 3", "Possessive Construction (مضاف ومضاف إليه)", "Lessons 4–7"], [10, "Unit 3", "Active & Passive Participles (اسم الفاعل والمفعول); Dual Form (مثنى)", "Lessons 8–10"], [11, "Vol. 2 – Unit 4", "Singular Pronoun (هو); Possessive Pronoun (ها); Pronouns with Prepositions (في بيته، له، منها، etc.)", "Lessons 1–4"], [12, "Unit 4", "Singular Pronoun (أنت); Possessive Pronoun (ك); Pronouns with Prepositions (في بيتك، لك، منك، etc.)", "Lessons 5–8"], [13, "Unit 4", "Singular Pronoun (هي); Possessive Pronoun (ها); Pronouns with Prepositions (في بيتها، لها، منها، etc.)", "Lessons 9–12"], [14, "Unit 4", "Singular Pronoun (أنا); Possessive Pronoun (ي); Pronouns with Prepositions (في بيتي، لي، مني، etc.)", "Lessons 13–16"], [15, "Unit 4", "Adverb (حال) Usage", "Lessons 17–18"]];
+
+// ============================================================
+//  V3.3 — course content, teacher course assignment
+// ============================================================
+function parseCourseIds(raw) {
+  const v = String(raw || '').trim();
+  return { courseIds: v && v !== 'ALL' ? v.split(',').filter(Boolean) : [], allCourses: v === 'ALL' };
+}
+// true when the teacher may use the course (no assignment yet = unrestricted, for existing teachers)
+function courseAllowed(ss, userId, courseId) {
+  if (!courseId) return true;
+  const d = ss.getSheetByName(SH.USERS).getDataRange().getValues(), h = d[0], ci = h.indexOf('CourseIDs');
+  if (ci < 0) return true;
+  const r = d.slice(1).find(x => x[h.indexOf('UserID')] === userId);
+  const raw = r ? String(r[ci] || '') : '';
+  return !raw || raw === 'ALL' || raw.split(',').includes(courseId);
+}
+function getMe(caller) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID), d = ss.getSheetByName(SH.USERS).getDataRange().getValues(), h = d[0];
+  const r = d.slice(1).find(x => x[h.indexOf('UserID')] === caller.id);
+  if (!r) return { ok:false, error:'User not found' };
+  const o = rowToObj(h, r);
+  return { ok:true, user:Object.assign({ name:o.FullName, deptId:o.DepartmentID, deptName:getDeptName(ss, o.DepartmentID), courseId:o.CourseID,
+    courseName:getCourseName(ss, o.CourseID), section:o.Section, coordId:o.CoordinatorID, email:o.Email }, parseCourseIds(o.CourseIDs)) };
+}
+function setTeacherCourses(caller, body) {
+  if (caller.role !== 'admin') return { ok:false, error:'Forbidden' };
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sh = ss.getSheetByName(SH.USERS), h = ensureCols(sh, NEW_COLS.USERS), d = sh.getDataRange().getValues();
+    const i = d.findIndex((r, k) => k > 0 && r[h.indexOf('UserID')] === body.userId);
+    if (i < 0) return { ok:false, error:'User not found.' };
+    if (d[i][h.indexOf('Role')] !== 'teacher') return { ok:false, error:'Courses can only be assigned to lecturers.' };
+    const valid = ss.getSheetByName(SH.COURSES).getDataRange().getValues().slice(1).map(r => r[0]);
+    const ids = (body.courseIds || []).map(String).filter(c => valid.includes(c));
+    if (!body.allCourses && !ids.length) return { ok:false, error:'Select at least one course, or tick All courses.' };
+    sh.getRange(i + 1, h.indexOf('CourseIDs') + 1).setValue(body.allCourses ? 'ALL' : ids.join(','));
+    if (!body.allCourses) sh.getRange(i + 1, h.indexOf('CourseID') + 1).setValue(ids[0]);
+    writeLog(ss, caller.id, caller.username, caller.role, 'Assign Courses', d[i][h.indexOf('Username')] + ': ' + (body.allCourses ? 'ALL' : ids.join(',')));
+    return { ok:true };
+  } finally { lock.releaseLock(); }
+}
+
+// ── Course content / syllabus (new sheet "CourseContent") ──
+const CC_HEADERS = ['ContentID','CourseID','SeqNo','Group','Topic','Lessons','Hours','WeekNo','Status','CreatedAt','UpdatedAt'];
+function ccSheet(ss) {
+  let sh = ss.getSheetByName('CourseContent');
+  if (!sh) {
+    sh = ss.insertSheet('CourseContent'); sh.appendRow(CC_HEADERS);
+    sh.getRange(1, 1, 1, CC_HEADERS.length).setFontWeight('bold').setBackground('#1a2744').setFontColor('#ffffff'); sh.setFrozenRows(1);
+  }
+  return sh;
+}
+function getCourseContent(caller, body) {
+  const sh = ccSheet(SpreadsheetApp.openById(SPREADSHEET_ID)), d = sh.getDataRange().getValues(), h = d[0];
+  let c = d.slice(1).map(r => rowToObj(h, r)).filter(o => o.ContentID && o.Status !== 'inactive');
+  if (body && body.courseId) c = c.filter(o => o.CourseID === body.courseId);
+  c.forEach(o => { o.SeqNo = Number(o.SeqNo) || 0; o.Hours = Number(o.Hours) || 0; o.WeekNo = Number(o.WeekNo) || 0; o.Lessons = String(o.Lessons || ''); });
+  c.sort((a, b) => String(a.CourseID).localeCompare(String(b.CourseID)) || a.SeqNo - b.SeqNo);
+  return { ok:true, content:c };
+}
+function saveCourseContent(caller, body) {
+  if (caller.role !== 'admin') return { ok:false, error:'Forbidden' };
+  const topic = String(body.topic || '').trim().slice(0, 400);
+  if (!body.courseId) return { ok:false, error:'Course is required.' };
+  if (!topic) return { ok:false, error:'Topic is required.' };
+  const hrs = parseFloat(body.hours) || 0, wk = parseInt(body.weekNo, 10) || 0;
+  if (hrs < 0 || hrs > 100 || wk < 0 || wk > 52) return { ok:false, error:'Please check hours (0–100) and week (0–52).' };
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sh = ccSheet(ss), d = sh.getDataRange().getValues(), h = d[0];
+    const seqs = d.slice(1).filter(r => r[h.indexOf('CourseID')] === body.courseId).map(r => Number(r[h.indexOf('SeqNo')]) || 0);
+    const rec = { Group:String(body.group || '').trim().slice(0, 150), Topic:topic, Lessons:String(body.lessons || '').slice(0, 100), Hours:hrs || '', WeekNo:wk || '',
+      SeqNo:parseInt(body.seqNo, 10) || (seqs.length ? Math.max(...seqs) + 1 : 1), UpdatedAt:now() };
+    if (body.contentId) {
+      const i = d.findIndex((r, k) => k > 0 && r[h.indexOf('ContentID')] === body.contentId);
+      if (i < 0) return { ok:false, error:'Content not found.' };
+      const o = Object.assign(rowToObj(h, d[i]), rec);
+      sh.getRange(i + 1, 1, 1, h.length).setValues([h.map(c => o[c] !== undefined ? o[c] : '')]);
+    } else {
+      const o = Object.assign({ ContentID:'CC' + String(Date.now()).slice(-9), CourseID:body.courseId, Status:'active', CreatedAt:now() }, rec);
+      sh.appendRow(h.map(c => o[c] !== undefined ? o[c] : ''));
+    }
+    writeLog(ss, caller.id, caller.username, caller.role, 'Save Course Content', body.courseId + ': ' + topic.slice(0, 60));
+    return { ok:true };
+  } finally { lock.releaseLock(); }
+}
+function deleteCourseContent(caller, body) {
+  if (caller.role !== 'admin') return { ok:false, error:'Forbidden' };
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sh = ccSheet(ss), d = sh.getDataRange().getValues(), i = d.findIndex((r, k) => k > 0 && r[0] === body.contentId);
+  if (i < 0) return { ok:false, error:'Content not found.' };
+  sh.deleteRow(i + 1);
+  writeLog(ss, caller.id, caller.username, caller.role, 'Delete Course Content', body.contentId);
+  return { ok:true };
+}
+// Adds the supplied Islamiat and Fehm-ul-Quran – I content, only for a course that has no content yet
+function seedCourseContent() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sh = ccSheet(ss), d = sh.getDataRange().getValues(), h = d[0];
+  const courses = ss.getSheetByName(SH.COURSES).getDataRange().getValues().slice(1).map(r => r[0]);
+  const has = c => d.slice(1).some(r => r[h.indexOf('CourseID')] === c);
+  const rows = [];
+  if (courses.includes('CRS003') && !has('CRS003'))
+    ISLAMIAT_CONTENT.forEach(([grp, topic, hrs], i) => rows.push({ CourseID:'CRS003', SeqNo:i + 1, Group:grp, Topic:topic, Lessons:'', Hours:hrs, WeekNo:'' }));
+  if (courses.includes('CRS001') && !has('CRS001')) {
+    const label = {};
+    FEQ1_PLAN.forEach(([wk, unit]) => { const n = unitNo(unit); if (!label[n] || /vol/i.test(unit)) label[n] = unit; });
+    let n = 0;
+    FEQ1_PLAN.forEach(([wk, unit, topics, lessons]) => {
+      const T = topics.split(';').map(s => s.trim()), L = lessons.split(';').map(s => s.trim());
+      T.forEach((t, i) => rows.push({ CourseID:'CRS001', SeqNo:++n, Group:label[unitNo(unit)], Topic:t, Lessons:L.length === T.length ? L[i] : lessons, Hours:'', WeekNo:wk }));
+    });
+  }
+  if (!rows.length) { console.log('Course content already present.'); return; }
+  const base = Date.now();
+  sh.getRange(sh.getLastRow() + 1, 1, rows.length, h.length).setValues(rows.map((o, i) => {
+    const m = { ContentID:'CC' + String(base + i).slice(-9), Status:'active', CreatedAt:now(), UpdatedAt:now() };
+    return h.map(c => m[c] !== undefined ? m[c] : (o[c] !== undefined ? o[c] : ''));
+  }));
+  console.log('✅ Course content added: ' + rows.length + ' rows.');
 }
