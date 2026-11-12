@@ -641,6 +641,7 @@ tbody tr{transition:background .12s}
         <div class="sb-av" id="sb-av">?</div>
         <div><div class="sb-uname" id="sb-name">—</div><div class="sb-urole" id="sb-role">—</div></div>
       </div>
+      <button class="sb-logout" style="margin-bottom:6px" onclick="openPassModal()">🔑 Change Password</button>
       <button class="sb-logout" onclick="doLogout()">🚪 Sign Out</button>
     </div>
   </nav>
@@ -743,7 +744,7 @@ tbody tr{transition:background .12s}
           <select class="fi" style="width:170px;padding:6px 10px" id="usr-course" onchange="filterUsers()"><option value="">All Courses</option></select>
         </div>
         <div class="card"><div class="tw"><table>
-          <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Department</th><th>Course</th><th>Section</th><th>Status</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Department</th><th>Course</th><th>Section / Lecturers</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody id="usr-tbl"><tr><td colspan="8"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
         </table></div></div>
       </div>
@@ -755,17 +756,18 @@ tbody tr{transition:background .12s}
           <button class="btn btn-navy" onclick="openModal('mcourse')">+ Add Course</button>
         </div>
         <div class="card"><div class="tw"><table>
-          <thead><tr><th>Code</th><th>Course Name</th><th>Department</th><th>Weeks</th><th>Semester</th><th>Status</th></tr></thead>
-          <tbody id="course-tbl"><tr><td colspan="6"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
+          <thead><tr><th>Code</th><th>Course Name</th><th>Available in</th><th>Units / Content</th><th>Weeks</th><th>Semester</th><th>Status</th></tr></thead>
+          <tbody id="course-tbl"><tr><td colspan="7"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
         </table></div></div>
       </div>
 
       <!-- ══ ADMIN REPORTS ══ -->
       <div id="panel-admin-reports" class="panel">
         <div class="sec-hd">
-          <div><div class="sec-title">All Weekly Reports</div></div>
-          <button class="btn btn-out btn-sm" onclick="exportCSV('rpt-tbl','reports.csv')">📥 Export CSV</button>
+          <div><div class="sec-title">Weekly Reports</div><div class="sec-sub">Review, filter and print lecturer reports</div></div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn btn-out btn-sm" onclick="printReportsSummary()">🖨️ Print summary</button><button class="btn btn-out btn-sm" onclick="exportCSV('rpt-tbl','reports.csv')">📥 Export CSV</button></div>
         </div>
+        <div class="stats-row" id="rpt-stats"></div>
         <div class="tabs" id="rpt-tabs">
           <div class="tab active" onclick="setRptTab('',this)">All</div>
           <div class="tab" onclick="setRptTab('pending',this)">Pending</div>
@@ -773,12 +775,15 @@ tbody tr{transition:background .12s}
           <div class="tab" onclick="setRptTab('rejected',this)">Returned</div>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          <input class="fi" style="width:180px;padding:6px 10px" id="rf-q" placeholder="Search lecturer…" oninput="loadReports()">
           <select class="fi" style="width:160px;padding:6px 10px" id="rf-dept" onchange="loadReports()"><option value="">All Depts</option></select>
-          <select class="fi" style="width:170px;padding:6px 10px" id="rf-course" onchange="loadReports()"><option value="">All Courses</option></select>
+          <select class="fi" style="width:190px;padding:6px 10px" id="rf-course" onchange="loadReports()"><option value="">All Courses</option></select>
           <select class="fi" style="width:110px;padding:6px 10px" id="rf-week" onchange="loadReports()"><option value="">All Weeks</option></select>
+          <select class="fi" style="width:120px;padding:6px 10px" id="rf-year" onchange="loadReports()"><option value="">All years</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option></select>
+          <select class="fi" style="width:140px;padding:6px 10px" id="rf-sem" onchange="loadReports()"><option value="">All semesters</option><option>Semester 1</option><option>Semester 2</option><option>Semester 3</option><option>Semester 4</option><option>Semester 5</option><option>Semester 6</option><option>Semester 7</option><option>Semester 8</option></select>
         </div>
         <div class="card"><div class="tw"><table>
-          <thead><tr><th>Lecturer</th><th>Dept</th><th>Course</th><th>Week</th><th>Date</th><th>Lessons</th><th>Status</th><th>Submitted</th><th>Action</th></tr></thead>
+          <thead><tr><th>Lecturer</th><th>Course / Unit</th><th>Week / Date</th><th>Lessons</th><th>Year / Semester</th><th>Attendance</th><th>Understanding</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody id="rpt-tbl"><tr><td colspan="9"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
         </table></div></div>
       </div>
@@ -847,6 +852,9 @@ tbody tr{transition:background .12s}
           <select class="fi" style="width:170px;padding:6px 10px" id="ttf-course" onchange="loadAdminTT()"><option value="">All Courses</option></select>
           <select class="fi" style="width:130px;padding:6px 10px" id="ttf-day" onchange="loadAdminTT()"><option value="">All Days</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option></select>
           <select class="fi" style="width:140px;padding:6px 10px" id="ttf-mode" onchange="loadAdminTT()"><option value="">All Modes</option><option value="Physical">Physical</option><option value="Online">Online</option></select>
+          <select class="fi" style="width:190px;padding:6px 10px" id="ttf-lec" onchange="loadAdminTT()"><option value="">All lecturers</option></select>
+          <input type="date" class="fi" style="width:160px;padding:6px 10px" id="ttf-date" title="Show slots valid on this date" onchange="loadAdminTT()">
+          <button class="btn btn-out btn-sm" onclick="printTimetable()">🖨️ Print timetable</button>
         </div>
         <div class="card" id="tt-by" style="margin-bottom:16px"></div>
         <div class="card" style="margin-bottom:16px">
@@ -862,10 +870,11 @@ tbody tr{transition:background .12s}
             <th>Day</th>
             <th>Time</th>
             <th>Mode</th>
+            <th>W.E.F. – To</th>
             <th>Room / Link</th>
             <th>Actions</th>
           </tr></thead>
-          <tbody id="tt-list"><tr><td colspan="9"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
+          <tbody id="tt-list"><tr><td colspan="10"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
         </table></div></div>
       </div>
 
@@ -962,8 +971,8 @@ tbody tr{transition:background .12s}
           <select class="fi" style="width:140px;padding:6px 10px" id="cttf-day" onchange="loadCoordTT()"><option value="">All Days</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option></select>
         </div>
         <div class="card"><div class="tw"><table>
-          <thead><tr><th>Lecturer</th><th>Subject</th><th>Course</th><th>Section</th><th>Day</th><th>Time</th><th>Mode</th><th>Room/Link</th></tr></thead>
-          <tbody id="coord-tt-tbl"><tr><td colspan="8"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
+          <thead><tr><th>Lecturer</th><th>Subject</th><th>Course</th><th>Section</th><th>Day</th><th>Time</th><th>Mode</th><th>W.E.F. – To</th><th>Room/Link</th></tr></thead>
+          <tbody id="coord-tt-tbl"><tr><td colspan="9"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
         </table></div></div>
       </div>
 
@@ -996,6 +1005,7 @@ tbody tr{transition:background .12s}
             <div class="card-bd" id="t-wk-plan"><div class="empty"><div class="spin spin-d"></div></div></div>
           </div>
         </div>
+        <div class="card" style="margin-top:16px"><div class="card-hd"><div class="card-title">🔐 Account</div></div><div class="card-bd" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-size:13px;color:var(--muted)">Keep your account secure and change your password regularly.</div><button class="btn btn-navy btn-sm" onclick="openPassModal()">Change Password</button></div></div>
       </div>
 
       <!-- ══ TEACHER SUBMIT ══ -->
@@ -1039,15 +1049,28 @@ tbody tr{transition:background .12s}
               <div class="card-bd">
                 <div style="background:var(--bg);border-radius:7px;padding:10px;margin-bottom:12px" id="plan-ref"><p style="font-size:12px;color:var(--muted)">Select a week above to see the plan.</p></div>
                 <div class="fg-grid c2" style="margin-bottom:10px"><div class="fg"><label>Student Year</label><select id="rpt-year"><option value="">Select</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option></select></div><div class="fg"><label>Semester</label><select id="rpt-sem"><option value="">Select</option><option>Semester 1</option><option>Semester 2</option><option>Semester 3</option><option>Semester 4</option><option>Semester 5</option><option>Semester 6</option><option>Semester 7</option><option>Semester 8</option></select></div></div>
-                <div class="fg" style="margin-bottom:10px"><label>Unit (jo actually parhaya)</label><select id="rpt-unit" onchange="onUnitChange()"></select></div>
+                <div class="fg" id="rpt-unit-w" style="margin-bottom:10px"><label>Unit covered</label><select id="rpt-unit" onchange="onUnitChange()"></select></div>
+                <div id="lesson-wrap">
                 <p style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">Select completed lessons:</p>
                 <div class="lp-wrap" id="lp-wrap"></div>
                 <div class="fg-grid c3" style="margin-top:12px">
-                  <div class="fg"><label>From Lesson</label><input type="number" id="rpt-from" min="1" oninput="syncManualRange()"></div>
-                  <div class="fg"><label>To Lesson</label><input type="number" id="rpt-to" min="1" oninput="syncManualRange()"></div>
+                  <div class="fg"><label>From Lesson *</label><input type="number" id="rpt-from" min="1" oninput="syncManualRange()"></div>
+                  <div class="fg"><label>To Lesson *</label><input type="number" id="rpt-to" min="1" oninput="syncManualRange()"></div>
                   <div class="fg"><label>Total Covered</label><input type="number" id="rpt-cnt" readonly style="background:var(--bg)"></div>
                 </div>
+</div>
+                <div id="topic-range" style="display:none">
+                  <div class="fg-grid c2">
+                    <div class="fg"><label>From topic *</label><select id="rpt-tfrom" onchange="onTopicRange()"><option value="">Select</option></select></div>
+                    <div class="fg"><label>To topic *</label><select id="rpt-tto" onchange="onTopicRange()"><option value="">Select</option></select></div>
+                  </div>
+                  <div style="font-size:11px;color:var(--subtle);margin-top:6px">Select the first and the last topic you covered this week. Topics in between are ticked below, and you can adjust them.</div>
+                </div>
               </div>
+            </div>
+            <div class="card" id="topics-card" style="margin-bottom:14px;display:none">
+              <div class="card-hd"><div class="card-title">Topics covered</div><span class="b b-gold" id="topics-cnt">0 selected</span></div>
+              <div class="card-bd"><p style="font-size:12px;color:var(--muted);margin-bottom:10px">Tick the topics you covered (optional).</p><div id="topics-list"></div></div>
             </div>
             <!-- Step 3 -->
             <div class="card" style="margin-bottom:14px">
@@ -1135,13 +1158,13 @@ tbody tr{transition:background .12s}
                   <div class="fg"><label>Hours *</label><input type="number" id="cl-hours" min="0.25" max="12" step="0.25" placeholder="e.g. 1.5"></div>
                 </div>
                 <div class="fg"><label>Department *</label><select id="cl-dept"><option value="">Select department</option></select></div>
-                <div class="fg"><label>Course</label><select id="cl-course"><option value="">Select course (optional)</option></select></div>
+                <div class="fg"><label>Course</label><select id="cl-course" onchange="fillTopicList()"><option value="">Select course (optional)</option></select></div>
                 <div class="fg-grid c2">
                   <div class="fg"><label>Year *</label><select id="cl-year"><option value="">Select year</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option></select></div>
                   <div class="fg"><label>Semester *</label><select id="cl-sem"><option value="">Select semester</option><option>Semester 1</option><option>Semester 2</option><option>Semester 3</option><option>Semester 4</option><option>Semester 5</option><option>Semester 6</option><option>Semester 7</option><option>Semester 8</option></select></div>
                 </div>
                 <div class="fg"><label>Location / Block</label><input type="text" id="cl-sec" placeholder="e.g. Block A, Room 12"></div>
-                <div class="fg"><label>Topic</label><input type="text" id="cl-topic" placeholder="e.g. Unit 3, Lessons 4–6"></div>
+                <div class="fg"><label>Topic</label><input type="text" id="cl-topic" list="cl-topic-dl" placeholder="Choose from the course topics or type your own"><datalist id="cl-topic-dl"></datalist></div>
                 <div class="fg"><label>Notes</label><textarea id="cl-notes" style="min-height:56px"></textarea></div>
               </div>
               <div style="display:flex;gap:8px;margin-top:14px"><button class="btn btn-gold" id="cl-save" style="flex:1;justify-content:center" onclick="saveClassLog()">Save Class</button><button class="btn btn-out" onclick="resetClassForm()">Clear</button></div>
@@ -1196,10 +1219,11 @@ tbody tr{transition:background .12s}
             <th>Course</th>
             <th>Section</th>
             <th>Mode</th>
+            <th>W.E.F. – To</th>
             <th>Room / Link</th>
             <th>Actions</th>
           </tr></thead>
-          <tbody id="t-tt-list"><tr><td colspan="9"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
+          <tbody id="t-tt-list"><tr><td colspan="10"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
         </table></div></div>
       </div>
 
@@ -1222,6 +1246,8 @@ tbody tr{transition:background .12s}
     <div class="fg" id="u-course-w"><label>Course</label><select id="u-course"><option value="">— Select —</option></select></div>
     <div class="fg" id="u-sec-w"><label>Section</label><input type="text" id="u-sec" placeholder="e.g. Section A"></div>
     <div class="fg" id="u-coord-w"><label>Coordinator</label><select id="u-coord"><option value="">— Select —</option></select></div>
+    <div class="fg" id="u-courses-w" style="grid-column:1/-1;display:none"><label>Assigned courses *</label><label style="display:flex;gap:8px;align-items:center;padding:4px 0;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)"><input type="checkbox" id="u-allc" onchange="toggleAllCourses(this.checked)"><strong>All courses</strong> <span style="color:var(--muted);font-weight:400">(lecturer can report on every course)</span></label><div id="u-course-list" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;border:1px solid var(--border);border-radius:7px;padding:8px"></div><div class="hint">Tick the courses this lecturer teaches, or tick All courses.</div></div>
+    <div class="fg" id="u-lect-w" style="grid-column:1/-1;display:none"><label>Lecturers under this coordinator</label><input class="fi" id="u-lect-q" placeholder="Search lecturers…" oninput="renderLectList()"><div id="u-lect-list" style="max-height:200px;overflow:auto;border:1px solid var(--border);border-radius:7px;padding:6px;margin-top:6px"></div><div class="hint" id="u-lect-hint"></div></div>
     <div class="fg"><label>Email</label><input type="email" id="u-email" placeholder="email@isra.edu.pk"></div>
    </div>
    <input type="hidden" id="u-edit-id">
@@ -1253,13 +1279,74 @@ tbody tr{transition:background .12s}
    <div class="fg-grid c2">
     <div class="fg"><label>Course Name *</label><input type="text" id="c-name" placeholder="e.g. Fehm-e-Quran Course 1"></div>
     <div class="fg"><label>Code</label><input type="text" id="c-code" placeholder="e.g. FEQ-1"></div>
-    <div class="fg"><label>Department *</label><select id="c-dept"><option value="">— Select —</option></select></div>
+    <div class="fg"><label>Department</label><select id="c-dept"><option value="">All departments</option></select></div>
     <div class="fg"><label>Total Weeks</label><input type="number" id="c-weeks" value="16"></div>
     <div class="fg"><label>Semester</label><input type="text" id="c-sem" placeholder="Semester 1"></div>
     <div class="fg" style="grid-column:1/-1"><label>Description</label><textarea id="c-desc" style="min-height:60px" placeholder="Brief description…"></textarea></div>
    </div>
   </div>
   <div class="modal-ft"><button class="btn btn-out" onclick="closeModal('mcourse')">Cancel</button><button class="btn btn-navy" onclick="saveCourse()">Add Course</button></div>
+ </div>
+</div>
+
+<!-- ══ MODAL: CHANGE PASSWORD ══ -->
+<div class="modal-ov" id="mpass" style="display:none" onclick="closeOv(event,'mpass')">
+ <div class="modal" style="width:420px">
+  <div class="modal-hd"><h3>Change Password</h3><button class="modal-x" onclick="closeModal('mpass')">✕</button></div>
+  <div class="modal-bd"><div class="fg-grid">
+   <div class="fg"><label>Current password *</label><input type="password" id="pw-old" autocomplete="current-password"></div>
+   <div class="fg"><label>New password *</label><input type="password" id="pw-new" autocomplete="new-password"><div class="hint">At least 8 characters</div></div>
+   <div class="fg"><label>Confirm new password *</label><input type="password" id="pw-new2" autocomplete="new-password" onkeydown="if(event.key==='Enter')savePassword()"></div>
+  </div></div>
+  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal('mpass')">Cancel</button><button class="btn btn-navy" id="pw-save" onclick="savePassword()">Update Password</button></div>
+ </div>
+</div>
+
+<!-- ══ MODAL: COURSE CONTENT ══ -->
+<div class="modal-ov" id="mcontent" style="display:none" onclick="closeOv(event,'mcontent')">
+ <div class="modal modal-lg" style="width:860px">
+  <div class="modal-hd"><h3 id="mcontent-title">Course Content</h3><button class="modal-x" onclick="closeModal('mcontent')">✕</button></div>
+  <div class="modal-bd">
+   <div class="tw" style="max-height:320px;overflow:auto"><table><thead><tr><th>#</th><th>Main topic / Unit</th><th>Topic</th><th>Lessons / Hours</th><th>Actions</th></tr></thead><tbody id="content-tbl"></tbody></table></div>
+   <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px" id="ct-form-title">Add topic</div>
+    <div class="fg-grid c2">
+     <div class="fg"><label>Main topic / Unit</label><input type="text" id="ct-group" placeholder="e.g. Makki Period"></div>
+     <div class="fg"><label>Topic *</label><input type="text" id="ct-topic" placeholder="Topic or subtopics"></div>
+    </div>
+    <div class="fg-grid" style="grid-template-columns:90px 1fr 110px 110px auto;align-items:end;margin-top:10px">
+     <div class="fg"><label>No.</label><input type="number" id="ct-seq" min="1"></div>
+     <div class="fg"><label>Lessons</label><input type="text" id="ct-les" placeholder="e.g. Lessons 5–8"></div>
+     <div class="fg"><label>Hours</label><input type="number" id="ct-hrs" min="0" step="0.5"></div>
+     <div class="fg"><label>Week</label><input type="number" id="ct-wk" min="0" max="52"></div>
+     <button class="btn btn-navy" id="ct-save" onclick="saveContent()">Add</button>
+    </div>
+    <input type="hidden" id="ct-id"><input type="hidden" id="ct-course">
+   </div>
+  </div>
+  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal('mcontent')">Close</button></div>
+ </div>
+</div>
+
+<!-- ══ MODAL: COURSE UNITS ══ -->
+<div class="modal-ov" id="munits" style="display:none" onclick="closeOv(event,'munits')">
+ <div class="modal modal-lg">
+  <div class="modal-hd"><h3 id="munits-title">Course Units</h3><button class="modal-x" onclick="closeModal('munits')">✕</button></div>
+  <div class="modal-bd">
+   <div class="tw"><table><thead><tr><th>Unit</th><th>Heading</th><th>Lessons</th><th>Actions</th></tr></thead><tbody id="units-tbl"></tbody></table></div>
+   <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px" id="un-form-title">Add unit</div>
+    <div class="fg-grid" style="grid-template-columns:90px 1fr 110px auto;align-items:end">
+     <div class="fg"><label>Unit no. *</label><input type="number" id="un-no" min="1" max="99"></div>
+     <div class="fg"><label>Heading *</label><input type="text" id="un-head" placeholder="Unit heading"></div>
+     <div class="fg"><label>Lessons</label><input type="number" id="un-les" min="1" placeholder="e.g. 12"></div>
+     <button class="btn btn-navy" id="un-save" onclick="saveUnit()">Add</button>
+    </div>
+    <input type="hidden" id="un-id"><input type="hidden" id="un-course">
+    <div class="hint" style="font-size:11px;color:var(--subtle);margin-top:6px">Headings can be added or changed at any time. Lessons is optional.</div>
+   </div>
+  </div>
+  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal('munits')">Close</button></div>
  </div>
 </div>
 
@@ -1294,6 +1381,8 @@ tbody tr{transition:background .12s}
     <div class="fg"><label>Day *</label><select id="slot-day"><option value="">— Select —</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option></select></div>
     <div class="fg"><label>Start Time *</label><input type="time" id="slot-start" value="08:00"></div>
     <div class="fg"><label>End Time *</label><input type="time" id="slot-end" value="09:00"></div>
+    <div class="fg"><label>W.E.F. (from date) *</label><input type="date" id="slot-from"></div>
+    <div class="fg"><label>End date *</label><input type="date" id="slot-to"></div>
     <div class="fg" id="slot-room-w"><label>Room No.</label><input type="text" id="slot-room" placeholder="e.g. Room 201, Block A"></div>
    </div>
    <div class="fg" id="slot-link-w" style="margin-top:10px;display:none"><label>Meeting Link</label><input type="text" id="slot-link" placeholder="https://meet.google.com/…"></div>
@@ -1672,7 +1761,7 @@ function bootApp() {
 
   startSync();
   // Load global data then show default panel
-  Promise.all([loadDepts(), loadCourses()]).then(() => {
+  Promise.all([refreshMe(), loadDepts(), loadCourses(), loadUnits(), loadContent()]).then(() => {
     const defaults={admin:'admin-dash',coordinator:'coord-dash',teacher:'t-dash'};
     showPanel(defaults[u.role]||'admin-dash');
   });
@@ -1768,7 +1857,7 @@ async function chainDeptCourse(deptId_el, courseId_el) {
   const deptId=document.getElementById(deptId_el)?.value||'';
   const coSel=document.getElementById(courseId_el); if(!coSel) return;
   while(coSel.options.length>1) coSel.remove(1);
-  COURSES.forEach(c=>coSel.add(new Option(c.CourseName,c.CourseID)));
+  (SESSION&&SESSION.user&&SESSION.user.role==='teacher'?myCourses():COURSES).forEach(c=>coSel.add(new Option(c.CourseName,c.CourseID)));
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1879,8 +1968,8 @@ function renderUsersTable(users) {
     <td style="font-family:monospace;font-size:12px">${u.Username}</td>
     <td><span class="b ${rc[u.Role]||'b-n'}">${cap(u.Role)}</span></td>
     <td style="font-size:12px">${u.DeptName||'—'}</td>
-    <td style="font-size:12px">${u.CourseName||'—'}</td>
-    <td style="font-size:12px">${u.Section||'—'}</td>
+    <td style="font-size:12px">${userCoursesText(u)}</td>
+    <td style="font-size:12px">${u.Role==='coordinator'?USERS_ALL.filter(t=>t.CoordinatorID===u.UserID).length+' lecturers':(u.Section||'—')}</td>
     <td><span class="b ${u.Status==='active'?'b-g':'b-n'}">${u.Status}</span></td>
     <td style="display:flex;gap:4px">
       <button class="btn btn-out btn-xs" onclick="editUser('${u.UserID}')">Edit</button>
@@ -1899,6 +1988,7 @@ function filterUsers() {
   ));
 }
 function openAddUser(){
+  LECT_SEL=new Set();COURSE_SEL=new Set();ALL_C=false;
   document.getElementById('muser-title').textContent='Add User';
   document.getElementById('u-save-btn').textContent='Add User';
   document.getElementById('u-edit-id').value='';
@@ -1912,6 +2002,8 @@ function openAddUser(){
 }
 function editUser(uid){
   const u=USERS_ALL.find(x=>x.UserID===uid); if(!u)return;
+  LECT_SEL=new Set(USERS_ALL.filter(t=>t.CoordinatorID===uid).map(t=>t.UserID));
+  {const cv=String(u.CourseIDs||'');ALL_C=cv==='ALL';COURSE_SEL=new Set(ALL_C?[]:cv?cv.split(','):(u.CourseID?[u.CourseID]:[]));}
   document.getElementById('muser-title').textContent='Edit User';
   document.getElementById('u-save-btn').textContent='Save Changes';
   document.getElementById('u-edit-id').value=uid;
@@ -1932,17 +2024,23 @@ async function saveUser(){
   const p={fullName:document.getElementById('u-name').value.trim(),username:document.getElementById('u-uname').value.trim(),password:document.getElementById('u-pass').value.trim(),role:document.getElementById('u-role').value,deptId:document.getElementById('u-dept').value,courseId:document.getElementById('u-course').value,section:document.getElementById('u-sec').value.trim(),coordId:document.getElementById('u-coord').value,email:document.getElementById('u-email').value.trim()};
   if(!p.fullName||!p.username){toast('Full name and username are required','warn');return;}
   if(!editId&&!p.password){toast('Password is required','warn');return;}
+  if(p.role==='teacher'&&!ALL_C&&!COURSE_SEL.size){toast('Please assign at least one course, or tick All courses','warn');return;}
   const r=await api(editId?{action:'updateUser',userId:editId,...p}:{action:'addUser',...p});
-  if(r.ok){closeModal('muser');toast(editId?'User updated!':'User added!','ok');loadUsers();}
+  if(r.ok){
+    if(p.role==='coordinator'){const s=await api({action:'setCoordinatorTeachers',coordinatorId:editId||r.userId,teacherIds:[...LECT_SEL]});if(!s.ok)toast(s.error||'Could not save lecturer assignment','err');}
+    if(p.role==='teacher'){const s2=await api({action:'setTeacherCourses',userId:editId||r.userId,courseIds:[...COURSE_SEL],allCourses:ALL_C});if(!s2.ok)toast(s2.error||'Could not save course assignment','err');}
+    if(editId&&p.password){const s3=await api({action:'changePassword',userId:editId,newPassword:p.password});if(!s3.ok)toast(s3.error||'Password was not changed','err');}
+    closeModal('muser');toast(editId?'User updated!':'User added!','ok');loadUsers();}
   else toast(r.error,'err');
 }
 async function delUser(uid){if(!confirm('Remove this user?'))return;const r=await api({action:'deleteUser',userId:uid});if(r.ok){toast('User removed','ok');loadUsers();}else toast(r.error,'err');}
 function onRoleChange(){
   const role=document.getElementById('u-role').value;
   const isT=role==='teacher';
-  document.getElementById('u-course-w').style.display=isT?'':'none';
+  document.getElementById('u-course-w').style.display='none';document.getElementById('u-courses-w').style.display=isT?'':'none';if(isT)renderCourseList();
   document.getElementById('u-sec-w').style.display=isT?'':'none';
   document.getElementById('u-coord-w').style.display=isT?'':'none';
+  const isC=role==='coordinator';document.getElementById('u-lect-w').style.display=isC?'':'none';if(isC)renderLectList();
 }
 function openCsvModal(){CSV_DATA=[];document.getElementById('csv-preview').style.display='none';document.getElementById('csv-msg').textContent='';document.getElementById('csv-up-btn').style.display='none';document.getElementById('csv-file').value='';openModal('mcsv');}
 function downloadCsvTemplate(e){e.preventDefault();const c='fullName,username,password,role,deptId,courseId,section,email,coordId\nUstaza Example,ex_user,pass123,teacher,DEPT001,CRS001,Section A,ex@isra.edu.pk,USR002';const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(c);a.download='lecturers-template.csv';a.click();}
@@ -1976,18 +2074,20 @@ async function uploadCsv(){
 //  COURSES
 // ════════════════════════════════════════════════════════════
 async function loadCourses2(){
+  await Promise.all([loadUnits(),loadContent()]);
   const r=await api({action:'getCourses'}); if(!r.ok)return; COURSES=r.courses;
   document.getElementById('course-tbl').innerHTML=COURSES.length?COURSES.map(c=>`<tr>
-    <td style="font-family:monospace;font-size:12px">${c.CourseCode||'—'}</td>
-    <td><strong>${c.CourseName}</strong></td>
-    <td style="font-size:12px">${c.DeptName||DEPTS.find(d=>d.DeptID===c.DeptID)?.DeptName||'—'}</td>
-    <td>${c.TotalWeeks} wks</td><td style="font-size:12px">${c.Semester||'—'}</td>
-    <td><span class="b ${c.Status==='active'?'b-g':'b-n'}">${c.Status}</span></td>
-  </tr>`).join(''):'<tr><td colspan="6"><div class="empty"><div class="ei">📚</div><h3>No courses</h3></div></td></tr>';
+    <td style="font-family:monospace;font-size:12px">${esc(c.CourseCode||'—')}</td>
+    <td><strong>${esc(c.CourseName)}</strong></td>
+    <td style="font-size:12px">All departments</td>
+    <td><button class="btn btn-out btn-xs" onclick="openUnits('${esc(c.CourseID)}')">📑 Units (${(UNITS[c.CourseID]||[]).length})</button> <button class="btn btn-out btn-xs" onclick="openContent('${esc(c.CourseID)}')">📚 Content (${(CONTENT[c.CourseID]||[]).length})</button></td>
+    <td>${esc(c.TotalWeeks)} wks</td><td style="font-size:12px">${esc(c.Semester||'—')}</td>
+    <td><span class="b ${c.Status==='active'?'b-g':'b-n'}">${esc(c.Status)}</span></td>
+  </tr>`).join(''):'<tr><td colspan="7"><div class="empty"><div class="ei">📚</div><h3>No courses</h3></div></td></tr>';
 }
 async function saveCourse(){
   const n=document.getElementById('c-name').value.trim(),d=document.getElementById('c-dept').value;
-  if(!n||!d){toast('Course name and department are required','warn');return;}
+  if(!n){toast('Course name is required','warn');return;}
   const r=await api({action:'addCourse',courseName:n,courseCode:document.getElementById('c-code').value,deptId:d,totalWeeks:document.getElementById('c-weeks').value,semester:document.getElementById('c-sem').value,description:document.getElementById('c-desc').value});
   if(r.ok){closeModal('mcourse');toast('Course added!','ok');loadCourses2();loadCourses();}
   else toast(r.error,'err');
@@ -1998,53 +2098,45 @@ async function saveCourse(){
 // ════════════════════════════════════════════════════════════
 function setRptTab(status,el){document.querySelectorAll('#rpt-tabs .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');RPT_STATUS=status;loadReports();}
 async function loadReports(){
-  const dept=document.getElementById('rf-dept')?.value||'';
-  const course=document.getElementById('rf-course')?.value||'';
-  const week=document.getElementById('rf-week')?.value||'';
-  const r=await api({action:'getReports',status:RPT_STATUS,deptId:dept,courseId:course,weekNum:week});
+  const g=id=>document.getElementById(id);
+  const r=await api({action:'getReports',deptId:g('rf-dept').value,courseId:g('rf-course').value,weekNum:g('rf-week').value,studentYear:g('rf-year').value,semester:g('rf-sem').value});
   if(!r.ok)return;
-  const sm={pending:'b-y',approved:'b-g',rejected:'b-r'};
-  const tb=document.getElementById('rpt-tbl');
-  tb.innerHTML=(r.reports||[]).length?(r.reports).map(rp=>`<tr>
-    <td><strong>${rp.LecturerName||'—'}</strong></td>
-    <td style="font-size:12px">${rp.DeptName||'—'}</td>
-    <td><span class="b b-gold" style="font-size:10.5px">${rp.CourseName||'—'}</span></td>
-    <td><strong>Wk ${rp.WeekNum}</strong></td>
-    <td style="font-size:12px">${fmtD(rp.ClassDate)}</td>
-    <td style="font-family:monospace;font-size:12px">${rp.LessonsFrom}–${rp.LessonsTo}</td>
-    <td><span class="b ${sm[rp.Status]||'b-n'}">${rp.Status}</span>${rp.Status!=='approved'?` <button class="btn btn-out btn-sm" onclick="editMyReport('${esc(rp.ReportID)}')">✏️ Edit</button>`:''}</td>
-    <td style="font-size:11px;color:var(--muted)">${fmtD(rp.SubmittedAt)}</td>
-    <td><button class="btn btn-out btn-xs" onclick='viewReport(${JSON.stringify(rp).replace(/'/g,"&#39;")})'>View</button></td>
-  </tr>`).join(''):'<tr><td colspan="9"><div class="empty"><div class="ei">📄</div><h3>No reports</h3></div></td></tr>';
+  let base=(r.reports||[]).slice().sort((a,b)=>(b.WeekNum-a.WeekNum)||String(a.LecturerName).localeCompare(String(b.LecturerName)));
+  const q=(g('rf-q').value||'').trim().toLowerCase();
+  if(q)base=base.filter(x=>String(x.LecturerName).toLowerCase().includes(q));
+  const cnt=s=>base.filter(x=>x.Status===s).length,wa=base.filter(x=>+x.TotalStudents>0);
+  const avg=wa.length?Math.round(wa.reduce((t,x)=>t+(+x.Attendance/+x.TotalStudents*100),0)/wa.length):0;
+  g('rpt-stats').innerHTML=statCards([['📄','Reports',base.length],['⏳','Pending',cnt('pending')],['✅','Approved',cnt('approved')],['📊','Avg attendance',avg+'%']]);
+  const L=RPT_STATUS?base.filter(x=>x.Status===RPT_STATUS):base;RPT_ROWS=L;
+  const sm={pending:'b-y',approved:'b-g',rejected:'b-r'},sl={pending:'Pending',approved:'Approved',rejected:'Returned'};
+  g('rpt-tbl').innerHTML=L.length?L.map((rp,i)=>{
+    const t=+rp.TotalStudents,a=+rp.Attendance,pc=t>0?Math.round(a/t*100):null;
+    return `<tr>
+    <td><strong>${esc(rp.LecturerName||'—')}</strong><div style="font-size:11px;color:var(--muted)">${esc(rp.DeptName||'—')}</div></td>
+    <td><span class="b b-gold" style="font-size:10.5px">${esc(rp.CourseName||'—')}</span><div style="font-size:11px;color:var(--muted);margin-top:3px">${esc(unitLabel(rp.CourseID,rp.BookUnit))}</div></td>
+    <td><strong>Week ${esc(rp.WeekNum)}</strong><div style="font-size:11px;color:var(--muted)">${fmtD(rp.ClassDate)}</div></td>
+    <td style="font-size:12px">${esc(rangeShort(rp))}</td>
+    <td style="font-size:12px">${esc(rp.StudentYear||'—')}<div style="color:var(--muted)">${esc(rp.Semester||'')}</div></td>
+    <td style="font-size:12px">${a||'—'}/${t||'—'}${pc===null?'':`<div style="color:${pc<60?'var(--red)':'var(--muted)'}">${pc}%</div>`}</td>
+    <td style="font-size:12px">${esc(rp.UnderstandingLevel||'—')}</td>
+    <td><span class="b ${sm[rp.Status]||'b-n'}">${sl[rp.Status]||esc(rp.Status)}</span></td>
+    <td style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn btn-out btn-xs" onclick="viewReport(RPT_ROWS[${i}])">View</button>${rp.Status==='pending'?`<button class="btn btn-ok btn-xs" onclick="approveRpt('${esc(rp.ReportID)}')">Approve</button>`:''}</td>
+  </tr>`;}).join(''):'<tr><td colspan="9"><div class="empty"><div class="ei">📄</div><h3>No reports found</h3></div></td></tr>';
 }
+function refreshReportLists(){if(SESSION.user.role==='coordinator')loadCoordReports();else loadReports();}
 function viewReport(r){
-  document.getElementById('mrpt-body').innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:14px">
-      <div style="background:var(--bg);border-radius:7px;padding:11px"><div style="font-size:10px;color:var(--muted);font-weight:700">LECTURER</div><div style="font-weight:700;font-size:14px;margin-top:3px">${r.LecturerName||'—'}</div></div>
-      <div style="background:var(--bg);border-radius:7px;padding:11px"><div style="font-size:10px;color:var(--muted);font-weight:700">WEEK / DATE</div><div style="font-weight:700;font-size:14px;margin-top:3px">Week ${r.WeekNum} · ${fmtD(r.ClassDate)}</div></div>
-      <div style="background:var(--bg);border-radius:7px;padding:11px"><div style="font-size:10px;color:var(--muted);font-weight:700">COURSE</div><div style="font-weight:600;font-size:13px;margin-top:3px">${r.CourseName||'—'}</div></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:14px">
-      <div style="background:#dcfce7;border-radius:7px;padding:10px;text-align:center"><div style="font-size:10px;color:#166534;font-weight:700">LESSONS</div><div style="font-size:18px;font-weight:700;color:#166534;font-family:monospace">${r.LessonsFrom}–${r.LessonsTo}</div></div>
-      <div style="background:#dbeafe;border-radius:7px;padding:10px;text-align:center"><div style="font-size:10px;color:#1e40af;font-weight:700">ATTENDANCE</div><div style="font-size:16px;font-weight:700;color:#1e40af">${r.Attendance||'—'}/${r.TotalStudents||'—'}</div></div>
-      <div style="background:#fef9c3;border-radius:7px;padding:10px;text-align:center"><div style="font-size:10px;color:#854d0e;font-weight:700">UNDERSTANDING</div><div style="font-size:13px;font-weight:700;color:#854d0e">${r.UnderstandingLevel||'—'}</div></div>
-    </div>
-    ${r.TajweedTopic?`<div style="background:var(--bg);border-radius:7px;padding:11px;margin-bottom:9px"><div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:4px">TAJWEED</div><div style="font-size:13px">${r.TajweedTopic} — ${r.TajweedStatus||'—'}</div></div>`:''}
-    ${r.Observations?`<div style="border:1px solid var(--border);border-radius:7px;padding:11px;margin-bottom:9px"><div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:4px">OBSERVATIONS</div><p style="font-size:13px;line-height:1.6">${r.Observations}</p></div>`:''}
-    ${r.Issues?`<div style="border:1px solid var(--border);border-radius:7px;padding:11px;margin-bottom:9px"><div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:4px">ISSUES</div><p style="font-size:13px;line-height:1.6">${r.Issues}</p></div>`:''}
-    ${r.CoordRemarks?`<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:11px"><div style="font-size:10px;font-weight:700;color:#166534;margin-bottom:4px">COORDINATOR REMARK</div><p style="font-size:13px">${r.CoordRemarks}</p></div>`:''}
-    ${r.Status==='pending'?`<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px"><div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px">ADD REMARK</div><textarea id="coord-rem" style="width:100%;padding:8px 11px;border:1.5px solid var(--border);border-radius:7px;font-family:'Inter',sans-serif;font-size:13px;resize:vertical;min-height:56px;outline:none" placeholder="Coordinator remarks…"></textarea></div>`:''}
-  `;
+  CUR_RPT=r;
+  document.getElementById('mrpt-body').innerHTML=reportHtml(r)+(r.Status==='pending'?'<div style="margin-top:14px"><div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px">ADD REMARK</div><textarea id="coord-rem" style="width:100%;padding:8px 11px;border:1.5px solid var(--border);border-radius:7px;font-family:\'Inter\',sans-serif;font-size:13px;resize:vertical;min-height:56px;outline:none" placeholder="Remarks for the lecturer…"></textarea></div>':'');
   const ft=document.getElementById('mrpt-ft');
-  ft.innerHTML=`<button class="btn btn-out" onclick="closeModal('mrpt')">Close</button>`;
+  ft.innerHTML='<button class="btn btn-out" onclick="closeModal(\'mrpt\')">Close</button><button class="btn btn-out" onclick="printReport()">🖨️ Print / PDF</button>';
   if(r.Status==='pending'){
     ft.innerHTML+=`<button class="btn btn-ok" onclick="approveRpt('${r.ReportID}')">✅ Approve</button>`;
     ft.innerHTML+=`<button class="btn btn-del" onclick="returnRpt('${r.ReportID}')">↩ Return</button>`;
   }
   openModal('mrpt');
 }
-async function approveRpt(id){const rem=document.getElementById('coord-rem')?.value||'';const r=await api({action:'updateReportStatus',reportId:id,status:'approved',coordRemarks:rem});if(r.ok){closeModal('mrpt');toast('Approved!','ok');loadReports();}else toast(r.error,'err');}
-async function returnRpt(id){const rem=document.getElementById('coord-rem')?.value||'';const r=await api({action:'updateReportStatus',reportId:id,status:'rejected',coordRemarks:rem});if(r.ok){closeModal('mrpt');toast('Report returned','warn');loadReports();}else toast(r.error,'err');}
+async function approveRpt(id){const rem=document.getElementById('coord-rem')?.value||'';const r=await api({action:'updateReportStatus',reportId:id,status:'approved',coordRemarks:rem});if(r.ok){closeModal('mrpt');toast('Approved!','ok');refreshReportLists();}else toast(r.error,'err');}
+async function returnRpt(id){const rem=document.getElementById('coord-rem')?.value||'';const r=await api({action:'updateReportStatus',reportId:id,status:'rejected',coordRemarks:rem});if(r.ok){closeModal('mrpt');toast('Report returned','warn');refreshReportLists();}else toast(r.error,'err');}
 
 // ════════════════════════════════════════════════════════════
 //  SCHEDULE
@@ -2157,7 +2249,7 @@ async function loadCoordTeachers(){
 async function viewTeacherRpts(lecId,name){
   const r=await api({action:'getReports',lecturerId:lecId}); if(!r.ok)return;
   const sm={approved:'b-g',pending:'b-y',rejected:'b-r'};
-  document.getElementById('mrpt-body').innerHTML=`<div style="font-weight:700;margin-bottom:12px">${name}'s Reports</div><div class="tw"><table><thead><tr><th>Week</th><th>Lessons</th><th>Attendance</th><th>Status</th><th>Remark</th></tr></thead><tbody>${(r.reports||[]).sort((a,b)=>b.WeekNum-a.WeekNum).map(rp=>`<tr><td><strong>Wk ${rp.WeekNum}</strong></td><td style="font-family:monospace;font-size:12px">${rp.LessonsFrom}–${rp.LessonsTo}</td><td style="font-size:12px">${rp.Attendance||'—'}/${rp.TotalStudents||'—'}</td><td><span class="b ${sm[rp.Status]||'b-n'}">${rp.Status}</span></td><td style="font-size:12px;color:var(--muted)">${rp.CoordRemarks||'—'}</td></tr>`).join('')||'<tr><td colspan="5"><div class="empty"><div class="ei">📋</div><h3>No reports</h3></div></td></tr>'}</tbody></table></div>`;
+  document.getElementById('mrpt-body').innerHTML=`<div style="font-weight:700;margin-bottom:12px">${name}'s Reports</div><div class="tw"><table><thead><tr><th>Week</th><th>Lessons</th><th>Attendance</th><th>Status</th><th>Remark</th></tr></thead><tbody>${(r.reports||[]).sort((a,b)=>b.WeekNum-a.WeekNum).map(rp=>`<tr><td><strong>Wk ${rp.WeekNum}</strong></td><td style="font-family:monospace;font-size:12px">${rangeShort(rp)}</td><td style="font-size:12px">${rp.Attendance||'—'}/${rp.TotalStudents||'—'}</td><td><span class="b ${sm[rp.Status]||'b-n'}">${rp.Status}</span></td><td style="font-size:12px;color:var(--muted)">${rp.CoordRemarks||'—'}</td></tr>`).join('')||'<tr><td colspan="5"><div class="empty"><div class="ei">📋</div><h3>No reports</h3></div></td></tr>'}</tbody></table></div>`;
   document.getElementById('mrpt-ft').innerHTML=`<button class="btn btn-out" onclick="closeModal('mrpt')">Close</button>`;
   openModal('mrpt');
 }
@@ -2167,7 +2259,7 @@ async function loadCoordReports(){
   document.getElementById('coord-rpt-tbl').innerHTML=(r.reports||[]).length?r.reports.map(rp=>`<tr>
     <td><strong>${rp.LecturerName||'—'}</strong></td><td><strong>Wk ${rp.WeekNum}</strong></td>
     <td style="font-size:12px">${fmtD(rp.ClassDate)}</td>
-    <td style="font-family:monospace;font-size:12px">${rp.LessonsFrom}–${rp.LessonsTo}</td>
+    <td style="font-family:monospace;font-size:12px">${rangeShort(rp)}</td>
     <td style="font-size:12px">${rp.Attendance||'—'}/${rp.TotalStudents||'—'}</td>
     <td><span class="b ${sm[rp.Status]||'b-n'}">${rp.Status}</span></td>
     <td style="display:flex;gap:4px">
@@ -2244,7 +2336,7 @@ async function loadTeacherDash(){
 //  TEACHER SUBMIT
 // ════════════════════════════════════════════════════════════
 async function initSubmitForm(){
-  if(!EDIT_PENDING)EDIT_ID='';
+  if(!EDIT_PENDING){EDIT_ID='';TOPIC_SEL=new Set();TR_CID='';}
   const u=SESSION.user;
   document.getElementById('sub-sub').textContent=(u.courseName||'Course')+' · '+(u.section||'—');
   document.getElementById('prev-name').textContent=u.name;
@@ -2287,6 +2379,10 @@ function selWeek(w){
     document.getElementById('plan-badge').textContent=p.unit+' · L'+p.from+'–'+p.to;
     document.getElementById('plan-ref').innerHTML=`<div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:3px">WEEK ${w} PLAN</div><div style="font-size:14px;font-weight:700;color:var(--navy)">${p.unit} · Lessons ${p.from}–${p.to}</div><div style="font-size:12px;color:var(--muted);margin-top:2px">${p.taj}</div>`;
     buildLessonPicker(p.list);
+  } else {
+    fillUnits();onUnitChange();
+    document.getElementById('plan-badge').textContent='No official plan';
+    document.getElementById('plan-ref').innerHTML='<p style="font-size:12px;color:var(--muted)">There is no official weekly plan for this course. Select the unit and the lessons you covered.</p>';
   }
 }
 function buildLessonPicker(lessons){
@@ -2326,22 +2422,26 @@ function onRptDeptChange(){
   const cSel=document.getElementById('rpt-course');
   if(!cSel)return;
   while(cSel.options.length>1)cSel.remove(1);
-  COURSES.forEach(c=>cSel.add(new Option(c.CourseName,c.CourseID)));
+  myCourses().forEach(c=>cSel.add(new Option(c.CourseName,c.CourseID)));
   // Pre-select teacher's course
   if(SESSION?.user?.courseId) cSel.value=SESSION.user.courseId;
+  if(!cSel.value&&myCourses().length===1)cSel.value=myCourses()[0].CourseID;
 }
 
 async function submitReport(){
   const wk=document.getElementById('rpt-wk').value;
   const subj=document.getElementById('slot-subject')?.value||'';
   if(!wk){toast('Please select a week','warn');return;}
+  const vf=RPT_FROM(),vt=RPT_TO();
+  if(!vf||!vt){toast(rptMode()==='topics'?'Please select the From and To topics':'Please select the From and To lessons','warn');return;}
+  if(+vt<+vf){toast('The "To" value cannot be before the "From" value','warn');return;}
   const sel=[...document.querySelectorAll('.lp-btn.lp-sel')].map(x=>x.dataset.l).join(',');
   const u=SESSION.user;
   const btn=document.getElementById('sub-btn');
   btn.innerHTML='<div class="spin"></div> Submitting…';btn.disabled=true;
   const selDeptId   = document.getElementById('rpt-dept')?.value  || u.deptId   || '';
   const selCourseId = document.getElementById('rpt-course')?.value || u.courseId || 'CRS001';
-  const r=await api({action:'submitReport',courseId:selCourseId,deptId:selDeptId,weekNum:parseInt(wk),classDate:document.getElementById('rpt-date').value,lessonsFrom:document.getElementById('rpt-from').value,lessonsTo:document.getElementById('rpt-to').value,lessonsList:sel,tajweedTopic:document.getElementById('rpt-taj-topic').value,tajweedStatus:document.getElementById('rpt-taj-status').value,translationStatus:document.getElementById('rpt-trans').value,surahPracticed:document.getElementById('rpt-surah').value,attendance:document.getElementById('rpt-att').value,totalStudents:document.getElementById('rpt-tot').value,understandingLevel:document.getElementById('rpt-und').value,observations:document.getElementById('rpt-obs').value,issues:document.getElementById('rpt-issues').value,suggestions:document.getElementById('rpt-sug').value,bookUnit:'Unit '+document.getElementById('rpt-unit').value,studentYear:document.getElementById('rpt-year').value,semester:document.getElementById('rpt-sem').value,reportId:EDIT_ID});
+  const r=await api({action:'submitReport',courseId:selCourseId,deptId:selDeptId,weekNum:parseInt(wk),classDate:document.getElementById('rpt-date').value,lessonsFrom:RPT_FROM(),lessonsTo:RPT_TO(),lessonsList:sel,tajweedTopic:document.getElementById('rpt-taj-topic').value,tajweedStatus:document.getElementById('rpt-taj-status').value,translationStatus:document.getElementById('rpt-trans').value,surahPracticed:document.getElementById('rpt-surah').value,attendance:document.getElementById('rpt-att').value,totalStudents:document.getElementById('rpt-tot').value,understandingLevel:document.getElementById('rpt-und').value,observations:document.getElementById('rpt-obs').value,issues:document.getElementById('rpt-issues').value,suggestions:document.getElementById('rpt-sug').value,bookUnit:(rptMode()==='topics'?'':'Unit '+document.getElementById('rpt-unit').value),studentYear:document.getElementById('rpt-year').value,semester:document.getElementById('rpt-sem').value,reportId:EDIT_ID,topicIds:[...TOPIC_SEL].join(','),topicsText:topicsText()});
   btn.innerHTML='✅ Submit Report';btn.disabled=false;
   if(r.ok){toast(EDIT_ID?'Report updated!':'Report submitted!','ok');EDIT_ID='';btn.innerHTML='✅ Submit Report';showPanel('t-history');}
   else toast(r.error||'Submit failed','err');
@@ -2356,12 +2456,12 @@ async function loadMyHistory(){
   const sm={approved:'b-g',pending:'b-y',rejected:'b-r'};
   document.getElementById('t-hist-tbl').innerHTML=(r.reports||[]).sort((a,b)=>b.WeekNum-a.WeekNum).length?(r.reports).map(rp=>`<tr>
     <td><strong>Wk ${rp.WeekNum}</strong></td><td style="font-size:12px">${fmtD(rp.ClassDate)}</td>
-    <td style="font-size:12px">${esc(rp.BookUnit||'—')}</td>
-    <td style="font-family:monospace;font-size:12px">${rp.LessonsFrom}–${rp.LessonsTo}</td>
+    <td style="font-size:12px">${esc(unitLabel(rp.CourseID,rp.BookUnit))}</td>
+    <td style="font-family:monospace;font-size:12px">${rangeShort(rp)}</td>
     <td style="font-size:12px">${rp.TajweedStatus||'—'}</td>
     <td style="font-size:12px">${rp.Attendance||'—'}/${rp.TotalStudents||'—'}</td>
     <td style="font-size:12px">${rp.UnderstandingLevel||'—'}</td>
-    <td><span class="b ${sm[rp.Status]||'b-n'}">${rp.Status}</span></td>
+    <td><span class="b ${sm[rp.Status]||'b-n'}">${rp.Status}</span>${rp.Status!=='approved'?` <button class="btn btn-out btn-xs" onclick="editMyReport('${esc(rp.ReportID)}')">✏️ Edit</button>`:''}</td>
     <td style="font-size:12px;color:var(--muted);max-width:120px">${rp.CoordRemarks||'—'}</td>
   </tr>`).join(''):'<tr><td colspan="9"><div class="empty"><div class="ei">📋</div><h3>No reports yet</h3></div></td></tr>';
 }
@@ -2408,7 +2508,10 @@ async function loadAdminTT(){
   // populate course filter
   const cf=document.getElementById('ttf-course');
   if(cf&&cf.options.length<=1)COURSES.forEach(c=>cf.add(new Option(c.CourseName,c.CourseID)));
-  const r=await api({action:'getTimetable',deptId,courseId,day,mode}); if(!r.ok)return;
+  if(!USERS_ALL.length){const ur=await api({action:'getUsers'});if(ur.ok)USERS_ALL=ur.users;}
+  fillOpts('ttf-lec',USERS_ALL.filter(u=>u.Role==='teacher').map(u=>[u.UserID,u.FullName]));
+  const r=await api({action:'getTimetable',deptId,courseId,day,mode,lecturerId:document.getElementById('ttf-lec')?.value||'',activeOn:document.getElementById('ttf-date')?.value||''}); if(!r.ok)return;
+  TT_CUR=r.slots||[];
   const slots=r.slots||[];
   document.getElementById('tt-count').textContent=slots.length+' slots';
   renderTTGrid(slots,'tt-grid');
@@ -2424,6 +2527,7 @@ async function loadCoordTT(){
     <td style="font-size:12px">${s.CourseName||'—'}</td><td style="font-size:12px">${s.Section||'—'}</td>
     <td><strong>${s.Day}</strong></td><td style="font-size:12px;white-space:nowrap">${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}</td>
     <td><span class="b ${sm[s.Mode]||'b-n'}">${s.Mode==='Physical'?'🏫':'💻'} ${s.Mode}</span></td>
+    <td style="font-size:11.5px;white-space:nowrap">${fmtRange(s)}</td>
     <td style="font-size:12px">${s.Mode==='Physical'?s.Room||'—':'<a href="'+s.Link+'" target="_blank" style="color:var(--teal)">Link</a>'}</td>
   </tr>`).join(''):'<tr><td colspan="8"><div class="empty"><div class="ei">📅</div><h3>No schedule</h3></div></td></tr>';
 }
@@ -2439,6 +2543,7 @@ async function loadTeacherTT(){
 }
 
 function autoShowNextSlot(slots) {
+  const td=ymdNow();slots=slots.filter(s=>(!s.EffectiveFrom||s.EffectiveFrom<=td)&&(!s.EffectiveTo||s.EffectiveTo>=td));
   if (!slots.length) return;
   const now       = new Date();
   const todayName = now.toLocaleDateString('en-US',{weekday:'long'}); // "Monday" etc
@@ -2516,6 +2621,7 @@ function renderTTList(slots,tbId,showLec){
         <td><strong>${s.Day||'—'}</strong></td>
         <td style="font-size:12px;white-space:nowrap">${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}</td>
         <td><span class="b ${sm[s.Mode]||'b-n'}">${s.Mode==='Physical'?'🏫 Physical':'💻 Online'}</span></td>
+        <td style="font-size:11.5px;white-space:nowrap">${fmtRange(s)}</td>
         <td style="font-size:12px">${s.Mode==='Physical'?(s.Room||'—'):'<a href="'+(s.Link||'#')+'" target="_blank" style="color:var(--teal)">'+(s.Link?'Join Link':'—')+'</a>'}</td>
         <td style="display:flex;gap:3px">
           <button class="btn btn-out btn-xs" onclick='editSlot(${JSON.stringify(s).replace(/'/g,"&#39;")})'>Edit</button>
@@ -2529,6 +2635,7 @@ function renderTTList(slots,tbId,showLec){
         <td style="font-size:12px">${s.CourseName||'—'}</td>
         <td style="font-size:12px">${s.Section||'—'}</td>
         <td><span class="b ${sm[s.Mode]||'b-n'}">${s.Mode==='Physical'?'🏫 Physical':'💻 Online'}</span></td>
+        <td style="font-size:11.5px;white-space:nowrap">${fmtRange(s)}</td>
         <td style="font-size:12px">${s.Mode==='Physical'?(s.Room||'—'):'<a href="'+(s.Link||'#')+'" target="_blank" style="color:var(--teal)">'+(s.Link?'Join Link':'—')+'</a>'}</td>
         <td style="display:flex;gap:3px">
           <button class="btn btn-out btn-xs" onclick='editSlot(${JSON.stringify(s).replace(/'/g,"&#39;")})'>Edit</button>
@@ -2536,7 +2643,7 @@ function renderTTList(slots,tbId,showLec){
         </td>
       `}
     </tr>`).join('')
-    : `<tr><td colspan="${showLec?9:9}"><div class="empty"><div class="ei">📅</div><h3>No slots yet — Add one!</h3></div></td></tr>`;
+    : `<tr><td colspan="10"><div class="empty"><div class="ei">📅</div><h3>No slots yet — Add one!</h3></div></td></tr>`;
 }
 function renderTTWeeklyCards(slots){
   const el=document.getElementById('t-tt-weekly'); if(!el)return;
@@ -2585,7 +2692,7 @@ function openSlotModal(){
   document.getElementById('mslot-title').textContent='Add Class Slot';
   document.getElementById('slot-edit-id').value='';
   ['slot-sec','slot-subject','slot-room','slot-link','slot-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('slot-day').value='';
+  document.getElementById('slot-day').value='';document.getElementById('slot-from').value='';document.getElementById('slot-to').value='';
   document.getElementById('slot-start').value='08:00';
   document.getElementById('slot-end').value='09:00';
   // populate dept
@@ -2618,6 +2725,7 @@ function editSlot(s){
   document.getElementById('slot-room').value=s.Room||'';
   document.getElementById('slot-link').value=s.Link||'';
   document.getElementById('slot-notes').value=s.Notes||'';
+  document.getElementById('slot-from').value=s.EffectiveFrom||'';document.getElementById('slot-to').value=s.EffectiveTo||'';
   document.getElementById('slot-sec').value=s.Section||'';
   document.getElementById('slot-subject').value=s.Subject||'';
   const dSel=document.getElementById('slot-dept');
@@ -2669,6 +2777,9 @@ async function saveSlot(){
   if(!day||!start||!end){toast('Day and time are required','warn');return;}
   if(start>=end){toast('End time must be after the start time','warn');return;}
   if(!subject){toast('Subject is required','warn');return;}
+  const wef=document.getElementById('slot-from').value,wto=document.getElementById('slot-to').value;
+  if(!wef||!wto){toast('W.E.F. date and end date are required','warn');return;}
+  if(wto<wef){toast('End date cannot be before the W.E.F. date','warn');return;}
   const lecId=document.getElementById('slot-lec').value||SESSION.user.id;
   const lecObj=USERS_ALL.find(u=>u.UserID===lecId);
   const courseId=document.getElementById('slot-course').value;
@@ -2676,7 +2787,7 @@ async function saveSlot(){
   const deptId=document.getElementById('slot-dept').value;
   const deptObj=DEPTS.find(d=>d.DeptID===deptId);
   const editId=document.getElementById('slot-edit-id').value;
-  const p={action:editId?'updateTimetableSlot':'addTimetableSlot',slotId:editId||undefined,lecturerId:lecId,lecturerName:lecObj?.FullName||SESSION.user.name,deptId,deptName:deptObj?.DeptName||'',courseId,courseName:courseObj?.CourseName||'',section:document.getElementById('slot-sec').value,subject,day,startTime:start,endTime:end,mode,room:mode==='Physical'?document.getElementById('slot-room').value:'',link:mode==='Online'?document.getElementById('slot-link').value:'',notes:document.getElementById('slot-notes').value};
+  const p={action:editId?'updateTimetableSlot':'addTimetableSlot',slotId:editId||undefined,lecturerId:lecId,lecturerName:lecObj?.FullName||SESSION.user.name,deptId,deptName:deptObj?.DeptName||'',courseId,courseName:courseObj?.CourseName||'',section:document.getElementById('slot-sec').value,subject,day,startTime:start,endTime:end,effectiveFrom:wef,effectiveTo:wto,mode,room:mode==='Physical'?document.getElementById('slot-room').value:'',link:mode==='Online'?document.getElementById('slot-link').value:'',notes:document.getElementById('slot-notes').value};
   const r=await api(p);
   if(r.ok){closeModal('mslot');toast(editId?'Slot updated!':'Slot added!','ok');const role=SESSION.user.role;if(role==='admin')loadAdminTT();else if(role==='teacher')loadTeacherTT();else loadCoordTT();}
   else toast(r.error||'Save failed','err');
@@ -2784,7 +2895,7 @@ window.bootApp=function(){localStorage.setItem('session',JSON.stringify(SESSION)
 // ════════════════════════════════════════════════════════════
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let RC={},INF={},LASTVER=null,SYNCT=null,CUR='',EDIT_ID='',EDIT_PENDING=null,MYRPT=[],AIH=[],AIR=[];
-const RO=new Set(['getDepartments','getCourses','getUsers','getReports','getDashboardStats','getTimetable','getWeeklyPlan','getLogs','getComparison','getClassLogs']);
+const RO=new Set(['getDepartments','getCourses','getUsers','getReports','getDashboardStats','getTimetable','getWeeklyPlan','getLogs','getComparison','getClassLogs','getCourseContent']);
 async function api(p){
   if(!RO.has(p.action)){const r=await apiRaw(p);RC={};return r;}
   const k=JSON.stringify(p),h=RC[k];
@@ -2799,7 +2910,7 @@ async function doSync(){
   const r=await apiRaw({action:'sync'});if(!r||!r.ok)return;
   if(r.live)renderLive(r.live);
   if(LASTVER!==null&&r.ver!==LASTVER){
-    RC={};const a=document.activeElement,typing=a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName);
+    RC={};if(SESSION.user.role==='teacher')refreshMe();const a=document.activeElement,typing=a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName);
     if(CUR&&CUR!=='t-submit'&&CUR!=='admin-ai'&&!typing&&PANEL_LOADERS[CUR])PANEL_LOADERS[CUR]();
   }
   LASTVER=r.ver;
@@ -2811,13 +2922,18 @@ function renderLive(l){
 }
 // ── Teacher report: free unit/week + edit ──
 function unitNo(s){const m=String(s||'').match(/unit\s*(\d+)/i);return m?+m[1]:0;}
-function curPlan(){const c=document.getElementById('rpt-course')?.value||SESSION.user.courseId;return c==='CRS002'?PLAN2:PLAN1;}
+function curCourseId(){return document.getElementById('rpt-course')?.value||SESSION.user.courseId||'';}
+function curPlan(){const c=curCourseId();return c==='CRS002'?PLAN2:(c===''||c==='CRS001')?PLAN1:[];}
 function fillUnits(){
-  const s=document.getElementById('rpt-unit'),m={};
-  curPlan().forEach(p=>{const u=unitNo(p.unit);m[u]=Math.max(m[u]||0,p.to);});
+  const s=document.getElementById('rpt-unit'),cid=curCourseId(),defs=UNITS[cid]||[],m={},hd={},pm={},pl=curPlan();
+  pl.forEach(p=>{const u=unitNo(p.unit);pm[u]=Math.max(pm[u]||0,p.to);});
+  if(defs.length)defs.forEach(d=>{m[d.UnitNo]=Math.max(d.LessonsCount||0,pm[d.UnitNo]||0)||20;hd[d.UnitNo]=d.Heading;});
+  else if(pl.length)Object.keys(pm).forEach(u=>m[u]=pm[u]);
+  else for(let i=1;i<=12;i++)m[i]=20;
   const cur=s.value;
-  s.innerHTML=Object.keys(m).map(u=>`<option value="${u}" data-max="${m[u]}">Unit ${u} (L1–${m[u]})</option>`).join('');
+  s.innerHTML=Object.keys(m).map(u=>`<option value="${u}" data-max="${m[u]}">Unit ${u}${hd[u]?' — '+esc(hd[u]):''} (L1–${m[u]})</option>`).join('');
   if(cur&&m[cur])s.value=cur;
+  buildTopics();
 }
 function onUnitChange(){
   const o=document.getElementById('rpt-unit').selectedOptions[0];if(!o)return;
@@ -2839,6 +2955,8 @@ function applyEdit(rp){
   set('rpt-taj-topic',rp.TajweedTopic);set('rpt-taj-status',rp.TajweedStatus);set('rpt-trans',rp.TranslationStatus);set('rpt-surah',rp.SurahPracticed);
   set('rpt-att',rp.Attendance);set('rpt-tot',rp.TotalStudents);set('rpt-und',rp.UnderstandingLevel);
   set('rpt-obs',rp.Observations);set('rpt-issues',rp.Issues);set('rpt-sug',rp.Suggestions);
+  TOPIC_SEL=new Set(String(rp.TopicIDs||'').split(',').filter(Boolean));buildTopics();
+  if(rptMode()==='topics'){set('rpt-tfrom',rp.LessonsFrom);set('rpt-tto',rp.LessonsTo);}
   g('sub-btn').innerHTML='💾 Update Report';toast('Edit mode — update the fields, then press Update Report','warn');
 }
 // ── Admin: plan vs actual ──
@@ -2868,7 +2986,7 @@ function renderTTBy(slots){
   const el=document.getElementById('tt-by');if(!el)return;const g={};
   slots.forEach(s=>{const d=s.DeptName||'—',t=s.LecturerName||'—';((g[d]=g[d]||{})[t]=g[d][t]||[]).push(s);});
   const ord=s=>DAYS.indexOf(s.Day)*10000+(parseInt(String(s.StartTime||'0:0').replace(':',''),10)||0);
-  const chip=s=>`<div style="background:${s.Mode==='Online'?'#eff6ff':'#f0fdf4'};border:1px solid ${s.Mode==='Online'?'#bfdbfe':'#bbf7d0'};border-radius:6px;padding:5px 9px;font-size:11.5px"><b>${esc((s.Day||'').slice(0,3))}</b> · ${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}<div style="color:var(--muted)">${esc(s.CourseName||'')}${s.Section?' · '+esc(s.Section):''}</div></div>`;
+  const chip=s=>`<div style="background:${s.Mode==='Online'?'#eff6ff':'#f0fdf4'};border:1px solid ${s.Mode==='Online'?'#bfdbfe':'#bbf7d0'};border-radius:6px;padding:5px 9px;font-size:11.5px"><b>${esc((s.Day||'').slice(0,3))}</b> · ${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}<div style="color:var(--muted)">${esc(s.CourseName||'')}${s.Section?' · '+esc(s.Section):''}</div><div style="color:var(--muted);font-size:10.5px">${fmtRange(s)}</div></div>`;
   const body=Object.keys(g).length?Object.keys(g).sort().map(d=>`<div style="margin-bottom:16px"><div style="font-weight:700;color:var(--navy);padding-bottom:6px;border-bottom:2px solid var(--gold);margin-bottom:6px">🏛️ ${esc(d)}</div>`+Object.keys(g[d]).sort().map(t=>{const L=g[d][t].sort((a,b)=>ord(a)-ord(b));return `<div style="display:flex;gap:14px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed var(--border)"><div style="min-width:190px"><strong>${esc(t)}</strong><div style="font-size:11px;color:var(--muted)">${L.length} ${L.length===1?'class':'classes'} per week</div></div><div style="display:flex;flex-wrap:wrap;gap:6px;flex:1">${L.map(chip).join('')}</div></div>`;}).join('')+'</div>').join(''):'<div class="empty"><div class="ei">📅</div><h3>No slots</h3></div>';
   el.innerHTML='<div class="card-hd"><div class="card-title">Department → Teacher wise</div></div><div class="card-bd">'+body+'</div>';
 }
@@ -2928,7 +3046,7 @@ function resetClassForm(){
 }
 async function loadClassLog(){
   const g=id=>document.getElementById(id),u=SESSION.user;
-  fillOpts('cl-dept',DEPTS.map(d=>[d.DeptID,d.DeptName]));fillOpts('cl-course',COURSES.map(c=>[c.CourseID,c.CourseName]));fillOpts('clf-dept',DEPTS.map(d=>[d.DeptID,d.DeptName]));
+  fillOpts('cl-dept',DEPTS.map(d=>[d.DeptID,d.DeptName]));fillOpts('cl-course',myCourses().map(c=>[c.CourseID,c.CourseName]));fillTopicList();fillOpts('clf-dept',DEPTS.map(d=>[d.DeptID,d.DeptName]));
   if(!g('cl-date').value)g('cl-date').value=ymdNow();
   g('cl-date').max=ymdNow();
   if(!g('cl-dept').value&&u.deptId&&!CL_EDIT)g('cl-dept').value=u.deptId;
@@ -2995,6 +3113,168 @@ const p2=n=>String(n).padStart(2,'0');
 function fmtD(v){if(!v)return '—';const s=String(v);if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(0,4);const d=new Date(s);return isNaN(d)?esc(s):p2(d.getDate())+'/'+p2(d.getMonth()+1)+'/'+d.getFullYear();}
 function fmtDT(v){if(!v)return '—';const d=new Date(String(v).replace(' ','T'));return isNaN(d)?esc(v):p2(d.getDate())+'/'+p2(d.getMonth()+1)+'/'+d.getFullYear()+' '+fmtT(p2(d.getHours())+':'+p2(d.getMinutes()));}
 function toYMD(v){if(!v)return '';const s=String(v);if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;const d=new Date(s);return isNaN(d)?s.slice(0,10):d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());}
+
+// ════════════════════════════════════════════════════════════
+//  V3.2 — reports, units, timetable dates, coordinator assignment
+// ════════════════════════════════════════════════════════════
+let UNITS={},LECT_SEL=new Set(),RPT_ROWS=[],CUR_RPT=null,TT_CUR=[];
+async function loadUnits(){const r=await api({action:'getCourseUnits'});if(r.ok){UNITS={};(r.units||[]).forEach(u=>(UNITS[u.CourseID]=UNITS[u.CourseID]||[]).push(u));}}
+function unitLabel(cid,bu){const n=unitNo(bu);if(!n)return bu||'—';const d=(UNITS[cid]||[]).find(x=>+x.UnitNo===n);return 'Unit '+n+(d&&d.Heading?' — '+d.Heading:'');}
+function fmtRange(s){if(!s.EffectiveFrom&&!s.EffectiveTo)return '—';return fmtD(s.EffectiveFrom)+' – '+(s.EffectiveTo?fmtD(s.EffectiveTo):'open');}
+// ── course unit headings ──
+function openUnits(cid){const c=COURSES.find(x=>x.CourseID===cid);document.getElementById('un-course').value=cid;document.getElementById('munits-title').textContent='Unit headings — '+(c?c.CourseName:'');resetUnitForm();renderUnits();openModal('munits');}
+function resetUnitForm(){const L=UNITS[document.getElementById('un-course').value]||[];['un-id','un-head','un-les'].forEach(i=>document.getElementById(i).value='');document.getElementById('un-no').value=L.length?Math.max(...L.map(u=>+u.UnitNo))+1:1;document.getElementById('un-save').textContent='Add';document.getElementById('un-form-title').textContent='Add unit';}
+function renderUnits(){const L=UNITS[document.getElementById('un-course').value]||[];document.getElementById('units-tbl').innerHTML=L.length?L.map(u=>`<tr><td><strong>Unit ${u.UnitNo}</strong></td><td>${esc(u.Heading)}</td><td>${u.LessonsCount||'—'}</td><td style="display:flex;gap:4px"><button class="btn btn-out btn-xs" onclick="editUnit('${esc(u.UnitID)}')">Edit</button><button class="btn btn-del btn-xs" onclick="delUnit('${esc(u.UnitID)}')">Delete</button></td></tr>`).join(''):'<tr><td colspan="4"><div class="empty" style="padding:20px"><h3>No unit headings yet</h3><p>Add them below whenever you are ready.</p></div></td></tr>';}
+function editUnit(id){const cid=document.getElementById('un-course').value,u=(UNITS[cid]||[]).find(x=>x.UnitID===id);if(!u)return;document.getElementById('un-id').value=id;document.getElementById('un-no').value=u.UnitNo;document.getElementById('un-head').value=u.Heading;document.getElementById('un-les').value=u.LessonsCount||'';document.getElementById('un-save').textContent='Update';document.getElementById('un-form-title').textContent='Edit unit';}
+async function saveUnit(){
+  const g=i=>document.getElementById(i).value;
+  if(!g('un-no')||!g('un-head').trim()){toast('Unit number and heading are required','warn');return;}
+  const r=await api({action:'saveCourseUnit',unitId:g('un-id'),courseId:g('un-course'),unitNo:g('un-no'),heading:g('un-head'),lessons:g('un-les')});
+  if(!r.ok){toast(r.error||'Save failed','err');return;}
+  toast('Unit saved','ok');await loadUnits();resetUnitForm();renderUnits();loadCourses2();
+}
+async function delUnit(id){if(!confirm('Delete this unit heading?'))return;const r=await api({action:'deleteCourseUnit',unitId:id});if(r.ok){toast('Unit deleted','ok');await loadUnits();resetUnitForm();renderUnits();loadCourses2();}else toast(r.error||'Delete failed','err');}
+// ── coordinator → lecturers ──
+function renderLectList(){
+  const el=document.getElementById('u-lect-list');if(!el)return;
+  const q=(document.getElementById('u-lect-q').value||'').toLowerCase(),cid=document.getElementById('u-edit-id').value;
+  const nm=id=>(USERS_ALL.find(x=>x.UserID===id)||{}).FullName;
+  const T=USERS_ALL.filter(u=>u.Role==='teacher'&&u.Status==='active'&&(!q||String(u.FullName).toLowerCase().includes(q)));
+  el.innerHTML=T.length?T.map(u=>{const o=u.CoordinatorID&&u.CoordinatorID!==cid&&!LECT_SEL.has(u.UserID)?` <span class="b b-y" style="font-size:10px">with ${esc(nm(u.CoordinatorID)||'another coordinator')}</span>`:'';return `<label style="display:flex;align-items:center;gap:8px;padding:5px 4px;cursor:pointer"><input type="checkbox" ${LECT_SEL.has(u.UserID)?'checked':''} onchange="toggleLect('${esc(u.UserID)}',this.checked)"><span style="flex:1"><strong>${esc(u.FullName)}</strong> <span style="color:var(--muted);font-size:11px">${esc(u.DeptName||'')}</span></span>${o}</label>`;}).join(''):'<div style="color:var(--muted);font-size:12px;padding:6px">No lecturers found</div>';
+  document.getElementById('u-lect-hint').textContent=LECT_SEL.size+' lecturer(s) selected. A lecturer has one coordinator; selecting one who is assigned elsewhere moves them here.';
+}
+function toggleLect(id,on){if(on)LECT_SEL.add(id);else LECT_SEL.delete(id);renderLectList();}
+// ── professional report view + printing ──
+const RP_CSS='.rp-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding-bottom:12px;border-bottom:3px solid #c9a84c;margin-bottom:12px}.rp-k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#6b7280;font-weight:700}.rp-t{font-size:20px;font-weight:700;color:#1a2744}.rp h3{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#1a2744;background:#f4f3ef;padding:6px 10px;margin:14px 0 0;border-left:3px solid #1a2744}.kv{width:100%;border-collapse:collapse;font-size:13px}.kv th{width:32%;text-align:left;color:#6b7280;font-weight:600;padding:7px 10px;border-bottom:1px solid #e4dfd4}.kv td{padding:7px 10px;border-bottom:1px solid #e4dfd4}.rp-box{border:1px solid #e4dfd4;border-radius:6px;padding:10px 12px;font-size:13px;line-height:1.6;margin-top:6px;white-space:pre-wrap}.rp-st{padding:4px 12px;border-radius:14px;font-size:12px;font-weight:700}';
+function reportHtml(r){
+  const t=+r.TotalStudents,a=+r.Attendance,pc=t>0?Math.round(a/t*100):null,kv=(k,v)=>`<tr><th>${k}</th><td>${v}</td></tr>`;
+  const st={pending:['#fef9c3','#854d0e','Pending review'],approved:['#dcfce7','#166534','Approved'],rejected:['#fee2e2','#991b1b','Returned']}[r.Status]||['#f4f3ef','#6b7280',esc(r.Status)];
+  const n=[r.LessonsList].join('').split(',').filter(Boolean).length;
+  const box=(k,v)=>v?`<h3>${k}</h3><div class="rp-box">${esc(v)}</div>`:'';
+  return `<div class="rp"><div class="rp-top"><div><div class="rp-k">Weekly teaching report</div><div class="rp-t">${esc(r.LecturerName||'—')}</div><div style="font-size:13px;color:#6b7280">${esc(r.DeptName||'')} · ${esc(r.CourseName||'')}</div></div><span class="rp-st" style="background:${st[0]};color:${st[1]}">${st[2]}</span></div>
+  <h3>Class details</h3><table class="kv">${kv('Week',esc(r.WeekNum))}${kv('Class date',fmtD(r.ClassDate))}${kv('Year / Semester',esc(r.StudentYear||'—')+' · '+esc(r.Semester||'—'))}${kv('Unit',esc(unitLabel(r.CourseID,r.BookUnit)))}${kv('Submitted on',fmtD(r.SubmittedAt))}</table>
+  <h3>Coverage</h3><table class="kv">${kv('Range covered (from – to)',rangeText(r,n))}${kv('Tajweed topic',esc(r.TajweedTopic||'—'))}${kv('Tajweed status',esc(r.TajweedStatus||'—'))}${kv('Translation',esc(r.TranslationStatus||'—'))}${kv('Surah practiced',esc(r.SurahPracticed||'—'))}${r.TopicsCovered?kv('Topics covered',esc(r.TopicsCovered).split('; ').join('<br>')):''}</table>
+  <h3>Attendance and understanding</h3><table class="kv">${kv('Students present',(a||'—')+' of '+(t||'—')+(pc===null?'':' ('+pc+'%)'))}${kv('Understanding level',esc(r.UnderstandingLevel||'—'))}</table>
+  ${box('Observations',r.Observations)}${box('Issues / challenges',r.Issues)}${box('Suggestions',r.Suggestions)}${box('Coordinator remarks',r.CoordRemarks)}</div>`;
+}
+const PRINT_CSS='@page{size:A4;margin:12mm}body{font-family:Arial,sans-serif;color:#1a2744;font-size:12px;line-height:1.5}.hd{display:flex;align-items:center;gap:12px;border-bottom:3px solid #c9a84c;padding-bottom:8px;margin-bottom:14px}.hd img{height:52px}.hd h1{margin:0;font-size:18px}.hd div div{color:#6b7280;font-size:12px}table.ls{width:100%;border-collapse:collapse}table.ls th,table.ls td{border:1px solid #ccc8be;padding:5px 7px;text-align:left;font-size:11.5px}table.ls th{background:#1a2744;color:#fff}.pb{page-break-after:always}.ft{margin-top:14px;font-size:10.5px;color:#6b7280}'+RP_CSS;
+function openPrint(title,body){const w=window.open('','_blank');if(!w){toast('Please allow pop-ups','warn');return;}w.document.write(`<html><head><title>${esc(title)}</title><style>${PRINT_CSS}</style></head><body><div class="hd"><img src="${LOGO_B64}" alt=""><div><h1>Isra University</h1><div>Fehm-ul-Quran Course Monitoring Portal — ${esc(title)}</div></div></div>${body}<div class="ft">Generated on ${fmtDT(new Date().toISOString())}</div></body></html>`);w.document.close();setTimeout(()=>w.print(),500);}
+function printReport(){if(CUR_RPT)openPrint('Weekly teaching report',reportHtml(CUR_RPT));}
+function printReportsSummary(){
+  if(!RPT_ROWS.length){toast('No reports to print','warn');return;}
+  openPrint('Weekly reports summary',`<table class="ls"><thead><tr><th>Lecturer</th><th>Department</th><th>Course / Unit</th><th>Week</th><th>Date</th><th>Lessons</th><th>Year / Sem</th><th>Attendance</th><th>Status</th></tr></thead><tbody>${RPT_ROWS.map(r=>`<tr><td>${esc(r.LecturerName)}</td><td>${esc(r.DeptName||'—')}</td><td>${esc(r.CourseName||'—')}<br>${esc(unitLabel(r.CourseID,r.BookUnit))}</td><td>${esc(r.WeekNum)}</td><td>${fmtD(r.ClassDate)}</td><td>${esc(rangeShort(r))}</td><td>${esc(r.StudentYear||'—')} · ${esc(r.Semester||'—')}</td><td>${esc(r.Attendance||'—')}/${esc(r.TotalStudents||'—')}</td><td>${esc(r.Status)}</td></tr>`).join('')}</tbody></table>`);
+}
+// ── printable weekly timetable (per lecturer, with W.E.F. – end date) ──
+function printTimetable(){
+  if(!TT_CUR.length){toast('No timetable slots to print','warn');return;}
+  const g={};TT_CUR.forEach(s=>(g[s.LecturerID]=g[s.LecturerID]||[]).push(s));
+  const ord=s=>DAYS.indexOf(s.Day)*10000+(parseInt(String(s.StartTime||'0:0').replace(':',''),10)||0);
+  const body=Object.values(g).map((L,i,a)=>{
+    L.sort((x,y)=>ord(x)-ord(y));
+    const f=L.map(s=>s.EffectiveFrom).filter(Boolean).sort(),t=L.map(s=>s.EffectiveTo).filter(Boolean).sort();
+    const wef=f.length?fmtD(f[0])+' to '+(t.length?fmtD(t[t.length-1]):'open'):'—',depts=[...new Set(L.map(s=>s.DeptName).filter(Boolean))].join(', ');
+    return `<div class="${i<a.length-1?'pb':''}"><h2 style="margin:0 0 4px">${esc(L[0].LecturerName)}</h2><div style="margin-bottom:10px;color:#6b7280">${esc(depts)} &nbsp;|&nbsp; W.E.F. ${wef}</div><table class="ls"><thead><tr><th>Day</th><th>Time</th><th>Department</th><th>Course</th><th>Subject</th><th>Location / Link</th><th>Mode</th><th>W.E.F. – To</th></tr></thead><tbody>${L.map(s=>`<tr><td>${esc(s.Day)}</td><td>${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}</td><td>${esc(s.DeptName||'—')}</td><td>${esc(s.CourseName||'—')}${s.Section?' · '+esc(s.Section):''}</td><td>${esc(s.Subject||'—')}</td><td>${esc(s.Mode==='Physical'?(s.Room||'—'):(s.Link||'—'))}</td><td>${esc(s.Mode||'')}</td><td>${fmtRange(s)}</td></tr>`).join('')}</tbody></table></div>`;}).join('');
+  openPrint('Weekly timetable',body);
+}
+document.head.insertAdjacentHTML('beforeend','<style>'+RP_CSS+'</style>');
+
+// ════════════════════════════════════════════════════════════
+//  V3.3 — course content, course assignment, password change
+// ════════════════════════════════════════════════════════════
+let CONTENT={},COURSE_SEL=new Set(),ALL_C=false,TOPIC_SEL=new Set(),TOPIC_CID='';
+async function refreshMe(){if(!GAS_URL||!SESSION)return;const r=await apiRaw({action:'getMe'});if(r&&r.ok&&r.user){Object.assign(SESSION.user,r.user);localStorage.setItem('session',JSON.stringify(SESSION));}}
+function myCourses(){const u=SESSION&&SESSION.user;if(!u||u.role!=='teacher'||u.allCourses||!(u.courseIds||[]).length)return COURSES;return COURSES.filter(c=>u.courseIds.includes(c.CourseID));}
+function userCoursesText(u){
+  if(u.Role!=='teacher')return esc(u.CourseName||'—');
+  const v=String(u.CourseIDs||'');
+  if(v==='ALL')return '<span class="b b-t">All courses</span>';
+  if(v)return v.split(',').map(id=>esc((COURSES.find(c=>c.CourseID===id)||{}).CourseName||id)).join('<br>');
+  return (u.CourseName?esc(u.CourseName)+'<br>':'')+'<span class="b b-y">Not assigned</span>';
+}
+// ── assign courses to a lecturer (Users modal) ──
+function renderCourseList(){
+  const el=document.getElementById('u-course-list');if(!el)return;
+  document.getElementById('u-allc').checked=ALL_C;
+  el.innerHTML=COURSES.map(c=>`<label style="display:flex;gap:8px;align-items:center;padding:3px 2px;cursor:pointer;font-size:13px;${ALL_C?'opacity:.5':''}"><input type="checkbox" ${COURSE_SEL.has(c.CourseID)?'checked':''} ${ALL_C?'disabled':''} onchange="toggleCourse('${esc(c.CourseID)}',this.checked)">${esc(c.CourseName)}</label>`).join('');
+}
+function toggleCourse(id,on){if(on)COURSE_SEL.add(id);else COURSE_SEL.delete(id);}
+function toggleAllCourses(on){ALL_C=on;renderCourseList();}
+// ── course content (admin) ──
+async function loadContent(){const r=await api({action:'getCourseContent'});if(r.ok){CONTENT={};(r.content||[]).forEach(c=>(CONTENT[c.CourseID]=CONTENT[c.CourseID]||[]).push(c));}}
+function openContent(cid){const c=COURSES.find(x=>x.CourseID===cid);document.getElementById('ct-course').value=cid;document.getElementById('mcontent-title').textContent='Content — '+(c?c.CourseName:'');resetContentForm();renderContent();openModal('mcontent');}
+function resetContentForm(){const L=CONTENT[document.getElementById('ct-course').value]||[];['ct-id','ct-group','ct-topic','ct-les','ct-hrs','ct-wk'].forEach(i=>document.getElementById(i).value='');document.getElementById('ct-seq').value=L.length?Math.max(...L.map(x=>+x.SeqNo))+1:1;document.getElementById('ct-save').textContent='Add';document.getElementById('ct-form-title').textContent='Add topic';}
+function renderContent(){
+  const L=CONTENT[document.getElementById('ct-course').value]||[];
+  const tot=L.reduce((t,x)=>t+(+x.Hours||0),0);
+  document.getElementById('content-tbl').innerHTML=L.length?L.map(x=>`<tr><td>${x.SeqNo}</td><td style="font-size:12px"><strong>${esc(x.Group||'—')}</strong></td><td style="font-size:12px">${esc(x.Topic)}</td><td style="font-size:12px;white-space:nowrap">${esc(topicMeta(x)||'—')}</td><td style="display:flex;gap:4px"><button class="btn btn-out btn-xs" onclick="editContent('${esc(x.ContentID)}')">Edit</button><button class="btn btn-del btn-xs" onclick="delContent('${esc(x.ContentID)}')">Delete</button></td></tr>`).join('')+(tot?`<tr style="background:var(--bg)"><td></td><td colspan="2"><strong>Total hours</strong></td><td colspan="2"><strong>${+tot.toFixed(2)} h</strong></td></tr>`:''):'<tr><td colspan="5"><div class="empty" style="padding:20px"><h3>No content yet</h3><p>Add topics below.</p></div></td></tr>';
+}
+function editContent(id){const x=(CONTENT[document.getElementById('ct-course').value]||[]).find(c=>c.ContentID===id);if(!x)return;const s=(i,v)=>document.getElementById(i).value=v;s('ct-id',id);s('ct-seq',x.SeqNo);s('ct-group',x.Group||'');s('ct-topic',x.Topic);s('ct-les',x.Lessons||'');s('ct-hrs',x.Hours||'');s('ct-wk',x.WeekNo||'');document.getElementById('ct-save').textContent='Update';document.getElementById('ct-form-title').textContent='Edit topic';}
+async function saveContent(){
+  const g=i=>document.getElementById(i).value;
+  if(!g('ct-topic').trim()){toast('Topic is required','warn');return;}
+  const r=await api({action:'saveCourseContent',contentId:g('ct-id'),courseId:g('ct-course'),seqNo:g('ct-seq'),group:g('ct-group'),topic:g('ct-topic'),lessons:g('ct-les'),hours:g('ct-hrs'),weekNo:g('ct-wk')});
+  if(!r.ok){toast(r.error||'Save failed','err');return;}
+  toast('Topic saved','ok');await loadContent();resetContentForm();renderContent();loadCourses2();
+}
+async function delContent(id){if(!confirm('Delete this topic?'))return;const r=await api({action:'deleteCourseContent',contentId:id});if(r.ok){toast('Topic deleted','ok');await loadContent();resetContentForm();renderContent();loadCourses2();}else toast(r.error||'Delete failed','err');}
+// ── teacher: choose topics covered ──
+function topicMeta(c){return [c.WeekNo?'Week '+c.WeekNo:'',c.Lessons||'',c.Hours?c.Hours+' h':''].filter(Boolean).join(' · ');}
+function buildTopics(){
+  const card=document.getElementById('topics-card');if(!card)return;
+  const cid=curCourseId(),L=CONTENT[cid]||[];
+  applyRptMode();
+  if(cid!==TOPIC_CID){TOPIC_SEL=new Set();TOPIC_CID=cid;}
+  if(!L.length){card.style.display='none';return;}
+  card.style.display='';
+  const g={};L.forEach(c=>(g[c.Group||'Topics']=g[c.Group||'Topics']||[]).push(c));
+  document.getElementById('topics-list').innerHTML=Object.keys(g).map(k=>`<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:4px">${esc(k)}</div>`+g[k].map(c=>`<label style="display:flex;gap:8px;align-items:flex-start;padding:4px 2px;cursor:pointer;font-size:13px"><input type="checkbox" style="margin-top:3px" ${TOPIC_SEL.has(c.ContentID)?'checked':''} onchange="toggleTopic('${esc(c.ContentID)}',this.checked)"><span>${esc(c.Topic)}${topicMeta(c)?`<span style="color:var(--muted);font-size:11.5px"> — ${esc(topicMeta(c))}</span>`:''}</span></label>`).join('')+'</div>').join('');
+  document.getElementById('topics-cnt').textContent=TOPIC_SEL.size+' selected';
+}
+function toggleTopic(id,on){if(on)TOPIC_SEL.add(id);else TOPIC_SEL.delete(id);document.getElementById('topics-cnt').textContent=TOPIC_SEL.size+' selected';}
+function topicsText(){return (CONTENT[curCourseId()]||[]).filter(c=>TOPIC_SEL.has(c.ContentID)).map(c=>c.Topic).join('; ');}
+function fillTopicList(){const dl=document.getElementById('cl-topic-dl');if(!dl)return;const cid=document.getElementById('cl-course').value;dl.innerHTML=(CONTENT[cid]||[]).map(c=>`<option value="${esc(c.Topic)}">`).join('');}
+// ── change password ──
+function openPassModal(){['pw-old','pw-new','pw-new2'].forEach(i=>document.getElementById(i).value='');openModal('mpass');}
+async function savePassword(){
+  const g=i=>document.getElementById(i).value;
+  if(!g('pw-old')||!g('pw-new')||!g('pw-new2')){toast('Please fill in all password fields','warn');return;}
+  if(g('pw-new').length<8){toast('The new password must be at least 8 characters','warn');return;}
+  if(g('pw-new')!==g('pw-new2')){toast('The new passwords do not match','warn');return;}
+  if(g('pw-new')===g('pw-old')){toast('The new password must be different from the current one','warn');return;}
+  const b=document.getElementById('pw-save');b.disabled=true;
+  const r=await api({action:'changePassword',oldPassword:g('pw-old'),newPassword:g('pw-new')});
+  b.disabled=false;
+  if(r.ok){closeModal('mpass');toast('Password updated','ok');}else toast(r.error||'Password was not changed','err');
+}
+
+// ── mandatory From / To (lessons, or topics for topic-based courses such as Islamiat) ──
+let TR_CID='';
+function isTopicCourse(cid){const L=CONTENT[cid]||[];return L.length>0&&!L.some(c=>c.Lessons);}
+function rptMode(){return isTopicCourse(curCourseId())?'topics':'lessons';}
+function RPT_FROM(){return document.getElementById(rptMode()==='topics'?'rpt-tfrom':'rpt-from').value;}
+function RPT_TO(){return document.getElementById(rptMode()==='topics'?'rpt-tto':'rpt-to').value;}
+function applyRptMode(){
+  const t=rptMode()==='topics',s=(id,v)=>{const e=document.getElementById(id);if(e)e.style.display=v;};
+  s('rpt-unit-w',t?'none':'');s('lesson-wrap',t?'none':'');s('topic-range',t?'':'none');
+  if(t)fillTopicRange();
+}
+function fillTopicRange(){
+  const cid=curCourseId(),L=CONTENT[cid]||[],f=document.getElementById('rpt-tfrom'),t=document.getElementById('rpt-tto');if(!f||!t)return;
+  const keep=cid===TR_CID?[f.value,t.value]:['',''];TR_CID=cid;
+  const opts=L.map(c=>`<option value="${c.SeqNo}">${esc((c.SeqNo+'. '+(c.Group&&c.Group!==c.Topic?c.Group+' — ':'')+c.Topic).slice(0,110))}</option>`).join('');
+  [f,t].forEach((s,i)=>{s.innerHTML='<option value="">Select</option>'+opts;s.value=keep[i];});
+}
+function onTopicRange(){
+  const f=+document.getElementById('rpt-tfrom').value,t=+document.getElementById('rpt-tto').value,L=CONTENT[curCourseId()]||[];
+  if(f&&t&&t<f){toast('The "To" topic cannot come before the "From" topic','warn');document.getElementById('rpt-tto').value='';return;}
+  if(f&&t){TOPIC_SEL=new Set(L.filter(c=>c.SeqNo>=f&&c.SeqNo<=t).map(c=>c.ContentID));buildTopics();document.getElementById('prev-les').textContent='Topics '+f+'–'+t+' ('+TOPIC_SEL.size+')';}
+}
+function rangeShort(r){return isTopicCourse(r.CourseID)?'Topics '+r.LessonsFrom+'–'+r.LessonsTo:'L'+r.LessonsFrom+'–'+r.LessonsTo;}
+function rangeText(r,n){
+  if(isTopicCourse(r.CourseID)){const L=CONTENT[r.CourseID]||[],a=L.find(c=>c.SeqNo===+r.LessonsFrom),b=L.find(c=>c.SeqNo===+r.LessonsTo);
+    return a&&b?esc(a.Topic)+(a===b?'':' → '+esc(b.Topic))+' <span style="color:#6b7280">(topics '+esc(r.LessonsFrom)+'–'+esc(r.LessonsTo)+')</span>':'Topics '+esc(r.LessonsFrom)+' – '+esc(r.LessonsTo);}
+  return 'L'+esc(r.LessonsFrom)+' – L'+esc(r.LessonsTo)+(n?' ('+n+' lessons)':'');
+}
 </script>
 </body>
 </html>
