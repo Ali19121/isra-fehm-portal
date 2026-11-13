@@ -514,6 +514,7 @@ tbody tr{transition:background .12s}
 @media(max-width:768px){.mob-menu{display:flex;align-items:center}}
 .live-u{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;border-bottom:1px solid var(--border)}.ai-msg{padding:10px 13px;border-radius:10px;margin:8px 0;font-size:13px;line-height:1.6;max-width:92%}.ai-u{background:var(--navy);color:#fff;margin-left:auto}.ai-b{background:var(--bg);border:1px solid var(--border)}.ai-tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .cl-grid{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}@media(max-width:900px){.cl-grid{grid-template-columns:1fr}}
+.ttr{width:100%;border-collapse:separate;border-spacing:0;font-size:12px;min-width:980px}.ttr th{background:linear-gradient(135deg,#1a2744,#2d3f6e);color:#fff;padding:10px 8px;font-size:11.5px;letter-spacing:.04em;text-align:center}.ttr td{border-bottom:1px solid #ece8de;border-right:1px solid #f1eee6;vertical-align:top;padding:6px;min-width:112px}.ttr td.tn{background:#faf9f7;min-width:200px}.ttr tr:hover td{background:#fcfbf8}.ttr tr:hover td.tn{background:#f6f4ee}.ttc{border-radius:7px;padding:5px 8px;margin-bottom:5px;font-size:11px;line-height:1.35;box-shadow:0 1px 3px rgba(26,39,68,.08)}.ttc b{display:block;font-size:11.5px}.ttc .s{opacity:.85;font-size:10.5px}.avt{width:36px;height:36px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;box-shadow:0 2px 6px rgba(26,39,68,.25)}.ldb{height:9px;background:#eef0f4;border-radius:6px;overflow:hidden;margin-top:5px}.ldb div{height:100%;border-radius:6px}.ttleg{display:flex;gap:6px;flex-wrap:wrap}.ttleg span{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:10px}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js"></script>
@@ -782,7 +783,7 @@ tbody tr{transition:background .12s}
           <select class="fi" style="width:160px;padding:6px 10px" id="rf-dept" onchange="loadReports()"><option value="">All Depts</option></select>
           <select class="fi" style="width:190px;padding:6px 10px" id="rf-course" onchange="loadReports()"><option value="">All Courses</option></select>
           <select class="fi" style="width:110px;padding:6px 10px" id="rf-week" onchange="loadReports()"><option value="">All Weeks</option></select>
-          <select class="fi" style="width:120px;padding:6px 10px" id="rf-year" onchange="loadReports()"><option value="">All years</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option></select>
+          <select class="fi" style="width:120px;padding:6px 10px" id="rf-year" onchange="loadReports()"><option value="">All years</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option><option>5th Year</option></select>
           <select class="fi" style="width:140px;padding:6px 10px" id="rf-sem" onchange="loadReports()"><option value="">All semesters</option><option>Semester 1</option><option>Semester 2</option><option>Semester 3</option><option>Semester 4</option><option>Semester 5</option><option>Semester 6</option><option>Semester 7</option><option>Semester 8</option></select>
         </div>
         <div class="card"><div class="tw"><table>
@@ -831,7 +832,7 @@ tbody tr{transition:background .12s}
           <input type="month" class="fi" style="width:160px;padding:6px 10px" id="hf-month" onchange="loadHours()">
           <select class="fi" style="width:190px;padding:6px 10px" id="hf-lec" onchange="loadHours()"><option value="">All lecturers</option></select>
           <select class="fi" style="width:170px;padding:6px 10px" id="hf-dept" onchange="loadHours()"><option value="">All departments</option></select>
-          <select class="fi" style="width:130px;padding:6px 10px" id="hf-year" onchange="loadHours()"><option value="">All years</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option></select>
+          <select class="fi" style="width:130px;padding:6px 10px" id="hf-year" onchange="loadHours()"><option value="">All years</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option><option>5th Year</option></select>
           <select class="fi" style="width:150px;padding:6px 10px" id="hf-sem" onchange="loadHours()"><option value="">All semesters</option><option>Semester 1</option><option>Semester 2</option><option>Semester 3</option><option>Semester 4</option><option>Semester 5</option><option>Semester 6</option><option>Semester 7</option><option>Semester 8</option></select>
         </div>
         <div class="stats-row" id="hrs-stats"></div>
@@ -847,41 +848,28 @@ tbody tr{transition:background .12s}
 
       <div id="panel-admin-timetable" class="panel">
         <div class="sec-hd">
-          <div><div class="sec-title">Timetable</div><div class="sec-sub">Department-wise class schedule</div></div>
-          <button class="btn btn-navy" onclick="openSlotModal()">+ Add Slot</button>
+          <div><div class="sec-title">Weekly Timetable</div><div class="sec-sub">Teachers only view their timetable. Add, edit and delete are available to the administrator.</div></div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn btn-out btn-sm" onclick="printTimetable()">🖨️ Print</button><button class="btn btn-navy" onclick="openSlotModal()">+ Add Slot</button></div>
         </div>
-        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-          <select class="fi" style="width:170px;padding:6px 10px" id="ttf-dept" onchange="loadAdminTT()"><option value="">All Departments</option></select>
-          <select class="fi" style="width:170px;padding:6px 10px" id="ttf-course" onchange="loadAdminTT()"><option value="">All Courses</option></select>
-          <select class="fi" style="width:130px;padding:6px 10px" id="ttf-day" onchange="loadAdminTT()"><option value="">All Days</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option></select>
-          <select class="fi" style="width:140px;padding:6px 10px" id="ttf-mode" onchange="loadAdminTT()"><option value="">All Modes</option><option value="Physical">Physical</option><option value="Online">Online</option></select>
-          <select class="fi" style="width:190px;padding:6px 10px" id="ttf-lec" onchange="loadAdminTT()"><option value="">All lecturers</option></select>
-          <input type="date" class="fi" style="width:160px;padding:6px 10px" id="ttf-date" title="Show slots valid on this date" onchange="loadAdminTT()">
-          <button class="btn btn-out btn-sm" onclick="printTimetable()">🖨️ Print timetable</button>
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+          <input type="date" class="fi" style="width:160px;padding:6px 10px" id="tt-admin-date" title="Show slots valid on this date (clear to show all)" onchange="loadAdminTT()">
+          <select class="fi" style="width:190px;padding:6px 10px" id="tt-admin-lec" onchange="loadAdminTT()"><option value="">All teachers</option></select>
+          <select class="fi" style="width:130px;padding:6px 10px" id="tt-admin-day" onchange="loadAdminTT()"><option value="">All days</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option></select>
+          <select class="fi" style="width:170px;padding:6px 10px" id="tt-admin-dept" onchange="loadAdminTT()"><option value="">All departments</option></select>
+          <select class="fi" style="width:190px;padding:6px 10px" id="tt-admin-course" onchange="loadAdminTT()"><option value="">All courses</option></select>
+          <select class="fi" style="width:120px;padding:6px 10px" id="tt-admin-year" onchange="loadAdminTT()"><option value="">All years</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option><option>5th Year</option></select>
+          <select class="fi" style="width:140px;padding:6px 10px" id="tt-admin-sem" onchange="loadAdminTT()"><option value="">All semesters</option><option>Semester 1</option><option>Semester 2</option><option>Semester 3</option><option>Semester 4</option><option>Semester 5</option><option>Semester 6</option><option>Semester 7</option><option>Semester 8</option></select>
         </div>
-        <div class="card" id="tt-by" style="margin-bottom:16px"></div>
-        <div class="card" style="margin-bottom:16px">
-          <div class="card-hd"><div class="card-title">Weekly Grid</div><span class="b b-gold" id="tt-count">0 slots</span></div>
-          <div style="overflow-x:auto"><div id="tt-grid"></div></div>
-        </div>
-        <div class="card"><div class="tw"><table>
-          <thead><tr>
-            <th>Lecturer</th>
-            <th>Department</th>
-            <th>Course</th>
-            <th>Subject / Topic</th>
-            <th>Day</th>
-            <th>Time</th>
-            <th>Mode</th>
-            <th>W.E.F. – To</th>
-            <th>Room / Link</th>
-            <th>Actions</th>
-          </tr></thead>
-          <tbody id="tt-list"><tr><td colspan="10"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
+        <div class="stats-row" id="tt-admin-stats"></div>
+        <div class="card" style="margin-bottom:16px"><div class="card-hd"><div class="card-title">⚡ Weekly teaching load</div><span style="font-size:11px;color:var(--muted)">🟢 up to 12 h &nbsp; 🟠 up to 20 h &nbsp; 🔴 above 20 h per week</span></div><div class="card-bd" id="tt-admin-load"></div></div>
+        <div class="card" style="margin-bottom:16px"><div class="card-hd"><div class="card-title">🗓️ Weekly roster</div><div class="ttleg" id="tt-admin-legend"></div></div><div class="tw" id="tt-admin-roster"></div></div>
+        <div class="card"><div class="card-hd"><div class="card-title">All slots</div></div><div class="tw"><table>
+          <thead><tr><th>Teacher</th><th>Department</th><th>Course</th><th>Year / Sem</th><th>Day</th><th>Time</th><th>Location</th><th>From – To date</th><th>Shown to</th><th>Actions</th></tr></thead>
+          <tbody id="tt-admin-tbl"><tr><td colspan="10"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
         </table></div></div>
       </div>
 
-      <!-- ══ ADMIN LOGS ══ -->
+<!-- ══ ADMIN LOGS ══ -->
       <div id="panel-admin-logs" class="panel">
         <div class="sec-hd"><div class="sec-title">Activity Logs</div><button class="btn btn-out btn-sm" onclick="exportCSV('logs-tbl','logs.csv')">📥 Export</button></div>
         <div class="card"><div class="tw"><table>
@@ -970,16 +958,26 @@ tbody tr{transition:background .12s}
 
       <!-- ══ COORD TIMETABLE ══ -->
       <div id="panel-coord-timetable" class="panel">
-        <div class="sec-hd"><div class="sec-title">Timetable View</div>
-          <select class="fi" style="width:140px;padding:6px 10px" id="cttf-day" onchange="loadCoordTT()"><option value="">All Days</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option></select>
+        <div class="sec-hd">
+          <div><div class="sec-title">Weekly Timetable</div><div class="sec-sub">You can add slots for your lecturers. Editing and deleting are done by the administrator.</div></div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn btn-out btn-sm" onclick="printTimetable()">🖨️ Print</button><button class="btn btn-navy" onclick="openSlotModal()">+ Add Slot</button></div>
         </div>
-        <div class="card"><div class="tw"><table>
-          <thead><tr><th>Lecturer</th><th>Subject</th><th>Course</th><th>Section</th><th>Day</th><th>Time</th><th>Mode</th><th>W.E.F. – To</th><th>Room/Link</th></tr></thead>
-          <tbody id="coord-tt-tbl"><tr><td colspan="9"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+          <input type="date" class="fi" style="width:160px;padding:6px 10px" id="tt-coord-date" title="Show slots valid on this date (clear to show all)" onchange="loadCoordTT()">
+          <select class="fi" style="width:190px;padding:6px 10px" id="tt-coord-lec" onchange="loadCoordTT()"><option value="">All teachers</option></select>
+          <select class="fi" style="width:130px;padding:6px 10px" id="tt-coord-day" onchange="loadCoordTT()"><option value="">All days</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option></select>
+          
+        </div>
+        <div class="stats-row" id="tt-coord-stats"></div>
+        <div class="card" style="margin-bottom:16px"><div class="card-hd"><div class="card-title">⚡ Weekly teaching load</div><span style="font-size:11px;color:var(--muted)">🟢 up to 12 h &nbsp; 🟠 up to 20 h &nbsp; 🔴 above 20 h per week</span></div><div class="card-bd" id="tt-coord-load"></div></div>
+        <div class="card" style="margin-bottom:16px"><div class="card-hd"><div class="card-title">🗓️ Weekly roster</div><div class="ttleg" id="tt-coord-legend"></div></div><div class="tw" id="tt-coord-roster"></div></div>
+        <div class="card"><div class="card-hd"><div class="card-title">All slots</div></div><div class="tw"><table>
+          <thead><tr><th>Teacher</th><th>Department</th><th>Course</th><th>Year / Sem</th><th>Day</th><th>Time</th><th>Location</th><th>From – To date</th></tr></thead>
+          <tbody id="tt-coord-tbl"><tr><td colspan="8"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
         </table></div></div>
       </div>
 
-      <!-- ══ COORD SUMMARY ══ -->
+<!-- ══ COORD SUMMARY ══ -->
       <div id="panel-coord-summary" class="panel">
         <div class="sec-hd"><div class="sec-title">Weekly Summary</div><button class="btn btn-gold" onclick="genSummary()">Generate Summary</button></div>
         <div id="summary-out"><div class="empty"><div class="ei">📋</div><h3>Click Generate Summary</h3></div></div>
@@ -1052,7 +1050,7 @@ tbody tr{transition:background .12s}
               <div class="card-hd"><div class="card-title">② Lessons Covered</div><span class="b b-gold" id="plan-badge">Select week first</span></div>
               <div class="card-bd">
                 <div style="background:var(--bg);border-radius:7px;padding:10px;margin-bottom:12px" id="plan-ref"><p style="font-size:12px;color:var(--muted)">Select a week above to see the plan.</p></div>
-                <div class="fg-grid c2" style="margin-bottom:10px"><div class="fg"><label>Student Year</label><select id="rpt-year"><option value="">Select</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option></select></div><div class="fg"><label>Semester</label><select id="rpt-sem"><option value="">Select</option><option>Semester 1</option><option>Semester 2</option><option>Semester 3</option><option>Semester 4</option><option>Semester 5</option><option>Semester 6</option><option>Semester 7</option><option>Semester 8</option></select></div></div>
+                <div class="fg-grid c2" style="margin-bottom:10px"><div class="fg"><label>Student Year</label><select id="rpt-year"><option value="">Select</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option><option>5th Year</option></select></div><div class="fg"><label>Semester</label><select id="rpt-sem"><option value="">Select</option><option>Semester 1</option><option>Semester 2</option><option>Semester 3</option><option>Semester 4</option><option>Semester 5</option><option>Semester 6</option><option>Semester 7</option><option>Semester 8</option></select></div></div>
                 <div class="fg" id="rpt-unit-w" style="margin-bottom:10px"><label>Unit covered</label><select id="rpt-unit" onchange="onUnitChange()"></select></div>
                 <div id="lesson-wrap">
                 <p style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">Select completed lessons:</p>
@@ -1164,7 +1162,7 @@ tbody tr{transition:background .12s}
                 <div class="fg"><label>Department *</label><select id="cl-dept"><option value="">Select department</option></select></div>
                 <div class="fg"><label>Course</label><select id="cl-course" onchange="fillTopicList()"><option value="">Select course (optional)</option></select></div>
                 <div class="fg-grid c2">
-                  <div class="fg"><label>Year *</label><select id="cl-year"><option value="">Select year</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option></select></div>
+                  <div class="fg"><label>Year *</label><select id="cl-year"><option value="">Select year</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option><option>5th Year</option></select></div>
                   <div class="fg"><label>Semester *</label><select id="cl-sem"><option value="">Select semester</option><option>Semester 1</option><option>Semester 2</option><option>Semester 3</option><option>Semester 4</option><option>Semester 5</option><option>Semester 6</option><option>Semester 7</option><option>Semester 8</option></select></div>
                 </div>
                 <div class="fg"><label>Location / Block</label><input type="text" id="cl-sec" placeholder="e.g. Block A, Room 12"></div>
@@ -1178,7 +1176,7 @@ tbody tr{transition:background .12s}
             <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
               <input type="month" class="fi" style="width:160px;padding:6px 10px" id="clf-month" onchange="loadClassLog()">
               <select class="fi" style="width:170px;padding:6px 10px" id="clf-dept" onchange="loadClassLog()"><option value="">All departments</option></select>
-              <select class="fi" style="width:130px;padding:6px 10px" id="clf-year" onchange="loadClassLog()"><option value="">All years</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option></select>
+              <select class="fi" style="width:130px;padding:6px 10px" id="clf-year" onchange="loadClassLog()"><option value="">All years</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option><option>5th Year</option></select>
               <select class="fi" style="width:150px;padding:6px 10px" id="clf-sem" onchange="loadClassLog()"><option value="">All semesters</option><option>Semester 1</option><option>Semester 2</option><option>Semester 3</option><option>Semester 4</option><option>Semester 5</option><option>Semester 6</option><option>Semester 7</option><option>Semester 8</option></select>
             </div>
             <div class="stats-row" id="cl-stats"></div>
@@ -1267,27 +1265,16 @@ tbody tr{transition:background .12s}
       <!-- ══ TEACHER TIMETABLE ══ -->
       <div id="panel-t-timetable" class="panel">
         <div class="sec-hd">
-          <div><div class="sec-title">My Timetable</div><div class="sec-sub" id="t-tt-sub">Weekly class schedule</div></div>
-          <button class="btn btn-navy btn-sm" onclick="openSlotModal()">+ Add My Slot</button>
+          <div><div class="sec-title">My Weekly Timetable</div><div class="sec-sub" id="t-tt-sub">Your classes (view only)</div></div>
         </div>
+        <div class="stats-row" id="t-tt-stats"></div>
         <div class="g2" style="margin-bottom:16px">
           <div class="card"><div class="card-hd"><div class="card-title">📅 Weekly Schedule</div></div><div class="card-bd" id="t-tt-weekly"><div class="empty"><div class="spin spin-d"></div></div></div></div>
           <div class="card"><div class="card-hd"><div class="card-title">ℹ️ Slot Details</div></div><div class="card-bd" id="t-tt-detail"><div class="empty"><div class="ei">📅</div><h3>Select a slot</h3></div></div></div>
         </div>
         <div class="card"><div class="tw"><table>
-          <thead><tr>
-            <th>Day</th>
-            <th>Start</th>
-            <th>End</th>
-            <th>Subject / Topic</th>
-            <th>Course</th>
-            <th>Section</th>
-            <th>Mode</th>
-            <th>W.E.F. – To</th>
-            <th>Room / Link</th>
-            <th>Actions</th>
-          </tr></thead>
-          <tbody id="t-tt-list"><tr><td colspan="10"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
+          <thead><tr><th>Day</th><th>Time</th><th>Course</th><th>Department</th><th>Year / Sem</th><th>Location</th><th>From – To date</th></tr></thead>
+          <tbody id="t-tt-list"><tr><td colspan="7"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
         </table></div></div>
       </div>
 
@@ -1421,43 +1408,25 @@ tbody tr{transition:background .12s}
 <!-- ══ MODAL: ADD/EDIT TIMETABLE SLOT ══ -->
 <div class="modal-ov" id="mslot" style="display:none" onclick="closeOv(event,'mslot')">
  <div class="modal modal-lg">
-  <div class="modal-hd"><h3 id="mslot-title">Add Class Slot</h3><button class="modal-x" onclick="closeModal('mslot')">✕</button></div>
+  <div class="modal-hd"><h3 id="mslot-title">Add Timetable Slot</h3><button class="modal-x" onclick="closeModal('mslot')">✕</button></div>
   <div class="modal-bd">
-   <!-- Physical / Online toggle -->
-   <div style="margin-bottom:16px">
-    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">Class Mode *</div>
-    <div class="mode-wrap">
-     <div id="mb-phys" class="mode-btn sel-phys" onclick="selMode('Physical')">
-      <div style="font-size:22px;margin-bottom:5px">🏫</div>
-      <div id="mb-phys-t" style="font-size:13px;font-weight:700;color:#fff">Physical</div>
-      <div style="font-size:10.5px;color:rgba(255,255,255,.6)">In-person class</div>
-     </div>
-     <div id="mb-onl" class="mode-btn" onclick="selMode('Online')">
-      <div style="font-size:22px;margin-bottom:5px">💻</div>
-      <div id="mb-onl-t" style="font-size:13px;font-weight:700;color:var(--muted)">Online</div>
-      <div style="font-size:10.5px;color:var(--subtle)">Virtual class</div>
-     </div>
-    </div>
-    <input type="hidden" id="slot-mode" value="Physical">
-   </div>
    <div class="fg-grid c2">
-    <div class="fg" id="slot-lec-w"><label>Lecturer *</label><select id="slot-lec" onchange="onSlotLecChange()"><option value="">— Select —</option></select></div>
-    <div class="fg"><label>Department *</label><select id="slot-dept" onchange="chainDeptCourse('slot-dept','slot-course')"><option value="">— Select —</option></select></div>
-    <div class="fg"><label>Course *</label><select id="slot-course"><option value="">— Select —</option></select></div>
-    <div class="fg"><label>Section</label><input type="text" id="slot-sec" placeholder="e.g. Section A"></div>
-    <div class="fg" style="grid-column:1/-1"><label>Subject / Topic *</label><input type="text" id="slot-subject" placeholder="e.g. Tajweed — Makharij Practice"></div>
-    <div class="fg"><label>Day *</label><select id="slot-day"><option value="">— Select —</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option></select></div>
-    <div class="fg"><label>Start Time *</label><input type="time" id="slot-start" value="08:00"></div>
-    <div class="fg"><label>End Time *</label><input type="time" id="slot-end" value="09:00"></div>
-    <div class="fg"><label>W.E.F. (from date) *</label><input type="date" id="slot-from"></div>
-    <div class="fg"><label>End date *</label><input type="date" id="slot-to"></div>
-    <div class="fg" id="slot-room-w"><label>Room No.</label><input type="text" id="slot-room" placeholder="e.g. Room 201, Block A"></div>
+    <div class="fg"><label>Teacher *</label><select id="slot-lec" onchange="onSlotLecChange()"><option value="">Select teacher</option></select></div>
+    <div class="fg"><label>Day *</label><select id="slot-day"><option value="">Select day</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option></select></div>
+    <div class="fg"><label>From date *</label><input type="date" id="slot-from"></div>
+    <div class="fg"><label>To date *</label><input type="date" id="slot-to"></div>
+    <div class="fg"><label>From time *</label><input type="time" id="slot-start" value="08:00"></div>
+    <div class="fg"><label>To time *</label><input type="time" id="slot-end" value="09:00"></div>
+    <div class="fg"><label>Course / Subject *</label><select id="slot-course"><option value="">Select course</option></select></div>
+    <div class="fg"><label>Department *</label><select id="slot-dept"><option value="">Select department</option></select></div>
+    <div class="fg"><label>Year *</label><select id="slot-year"><option value="">Select year</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option><option>5th Year</option></select></div>
+    <div class="fg"><label>Semester *</label><select id="slot-sem"><option value="">Select semester</option><option>Semester 1</option><option>Semester 2</option><option>Semester 3</option><option>Semester 4</option><option>Semester 5</option><option>Semester 6</option><option>Semester 7</option><option>Semester 8</option></select></div>
+    <div class="fg" style="grid-column:1/-1"><label>Class location / block name *</label><input type="text" id="slot-room" placeholder="e.g. Block A, Room 12"></div>
+    <div class="fg" id="slot-coord-w" style="grid-column:1/-1"><label>Show this slot to coordinator(s)</label><div id="slot-coord-list" style="display:flex;flex-wrap:wrap;gap:6px 18px;border:1px solid var(--border);border-radius:7px;padding:8px"></div><div class="hint">The teacher's own coordinator is ticked by default. You can tick more than one, or none.</div></div>
    </div>
-   <div class="fg" id="slot-link-w" style="margin-top:10px;display:none"><label>Meeting Link</label><input type="text" id="slot-link" placeholder="https://meet.google.com/…"></div>
-   <div class="fg" style="margin-top:10px"><label>Notes (Optional)</label><textarea id="slot-notes" style="min-height:56px" placeholder="Any additional info…"></textarea></div>
    <input type="hidden" id="slot-edit-id">
   </div>
-  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal('mslot')">Cancel</button><button class="btn btn-navy" onclick="saveSlot()">Save Slot</button></div>
+  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal('mslot')">Cancel</button><button class="btn btn-navy" id="slot-save" onclick="saveSlot()">Save Slot</button></div>
  </div>
 </div>
 
@@ -1511,7 +1480,7 @@ const CONFIG = {
 // ════════════════════════════════════════════════════════════
 //  CONSTANTS
 // ════════════════════════════════════════════════════════════
-const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
 const PLAN1 = [
   {wk:1, unit:'Vol.1–Unit 1', from:1,  to:4,  list:[1,2,3,4],         taj:'Importance of Tajweed'},
@@ -2571,45 +2540,13 @@ async function loadTeacherSchedule(){
 // ════════════════════════════════════════════════════════════
 //  TIMETABLE
 // ════════════════════════════════════════════════════════════
-async function loadAdminTT(){
-  const deptId=document.getElementById('ttf-dept')?.value||'';
-  const courseId=document.getElementById('ttf-course')?.value||'';
-  const day=document.getElementById('ttf-day')?.value||'';
-  const mode=document.getElementById('ttf-mode')?.value||'';
-  // populate course filter
-  const cf=document.getElementById('ttf-course');
-  if(cf&&cf.options.length<=1)COURSES.forEach(c=>cf.add(new Option(c.CourseName,c.CourseID)));
-  if(!USERS_ALL.length){const ur=await api({action:'getUsers'});if(ur.ok)USERS_ALL=ur.users;}
-  fillOpts('ttf-lec',USERS_ALL.filter(u=>u.Role==='teacher').map(u=>[u.UserID,u.FullName]));
-  const r=await api({action:'getTimetable',deptId,courseId,day,mode,lecturerId:document.getElementById('ttf-lec')?.value||'',activeOn:document.getElementById('ttf-date')?.value||''}); if(!r.ok)return;
-  TT_CUR=r.slots||[];
-  const slots=r.slots||[];
-  document.getElementById('tt-count').textContent=slots.length+' slots';
-  renderTTGrid(slots,'tt-grid');
-  renderTTList(slots,'tt-list',true);
-  renderTTBy(slots);
-}
-async function loadCoordTT(){
-  const day=document.getElementById('cttf-day')?.value||'';
-  const r=await api({action:'getTimetable',deptId:SESSION.user.deptId||'',day}); if(!r.ok)return;
-  const sm={Physical:'b-g',Online:'b-b'};
-  document.getElementById('coord-tt-tbl').innerHTML=(r.slots||[]).sort((a,b)=>DAYS.indexOf(a.Day)-DAYS.indexOf(b.Day)||a.StartTime.localeCompare(b.StartTime)).length?(r.slots).map(s=>`<tr>
-    <td><strong>${s.LecturerName}</strong></td><td style="font-size:12px;font-style:italic">${s.Subject||'—'}</td>
-    <td style="font-size:12px">${s.CourseName||'—'}</td><td style="font-size:12px">${s.Section||'—'}</td>
-    <td><strong>${s.Day}</strong></td><td style="font-size:12px;white-space:nowrap">${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}</td>
-    <td><span class="b ${sm[s.Mode]||'b-n'}">${s.Mode==='Physical'?'🏫':'💻'} ${s.Mode}</span></td>
-    <td style="font-size:11.5px;white-space:nowrap">${fmtRange(s)}</td>
-    <td style="font-size:12px">${s.Mode==='Physical'?s.Room||'—':'<a href="'+s.Link+'" target="_blank" style="color:var(--teal)">Link</a>'}</td>
-  </tr>`).join(''):'<tr><td colspan="8"><div class="empty"><div class="ei">📅</div><h3>No schedule</h3></div></td></tr>';
-}
 async function loadTeacherTT(){
   const u=SESSION.user;
-  document.getElementById('t-tt-sub').textContent=(u.courseName||'')+' · '+(u.section||'');
   const r=await api({action:'getTimetable',lecturerId:u.id}); if(!r.ok)return;
-  const slots=r.slots||[];
+  const slots=r.slots||[],td=ymdNow(),act=slots.filter(s=>(!s.EffectiveFrom||s.EffectiveFrom<=td)&&(!s.EffectiveTo||s.EffectiveTo>=td));
+  document.getElementById('t-tt-stats').innerHTML=statCards([['📚','Classes per week',act.length],['⏱️','Weekly hours',fmtH(act.reduce((t,s)=>t+slotHours(s),0))],['📅','Teaching days',new Set(act.map(s=>s.Day)).size]]);
   renderTTWeeklyCards(slots);
-  renderTTList(slots,'t-tt-list',false);
-  // Auto-show next upcoming class
+  renderTTList(slots,'t-tt-list','teacher');
   autoShowNextSlot(slots);
 }
 
@@ -2676,46 +2613,6 @@ function renderTTGrid(slots,containerId){
   h+='</tbody></table>';
   cont.innerHTML=h;
 }
-function renderTTList(slots,tbId,showLec){
-  const tb=document.getElementById(tbId); if(!tb)return;
-  const sm={Physical:'b-g',Online:'b-b'};
-  // Admin table header: Lecturer | Dept | Course | Subject | Day | Time | Mode | Room/Link | Actions
-  // Teacher table header: Day | Start | End | Subject | Course | Section | Mode | Room/Link | Actions
-  tb.innerHTML=slots.length ? slots
-    .sort((a,b)=>DAYS.indexOf(a.Day)-DAYS.indexOf(b.Day)||a.StartTime.localeCompare(b.StartTime))
-    .map(s=>`<tr>
-      ${showLec ? `
-        <td><strong>${s.LecturerName||'—'}</strong><div style="font-size:10.5px;color:var(--muted)">${s.LecturerName?'':'—'}</div></td>
-        <td style="font-size:12px">${s.DeptName||'—'}</td>
-        <td style="font-size:12px">${s.CourseName||'—'}</td>
-        <td style="font-size:12px;font-style:italic;color:var(--muted)">${s.Subject||'—'}</td>
-        <td><strong>${s.Day||'—'}</strong></td>
-        <td style="font-size:12px;white-space:nowrap">${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}</td>
-        <td><span class="b ${sm[s.Mode]||'b-n'}">${s.Mode==='Physical'?'🏫 Physical':'💻 Online'}</span></td>
-        <td style="font-size:11.5px;white-space:nowrap">${fmtRange(s)}</td>
-        <td style="font-size:12px">${s.Mode==='Physical'?(s.Room||'—'):'<a href="'+(s.Link||'#')+'" target="_blank" style="color:var(--teal)">'+(s.Link?'Join Link':'—')+'</a>'}</td>
-        <td style="display:flex;gap:3px">
-          <button class="btn btn-out btn-xs" onclick='editSlot(${JSON.stringify(s).replace(/'/g,"&#39;")})'>Edit</button>
-          <button class="btn btn-del btn-xs" onclick="delSlot('${s.SlotID}')">Del</button>
-        </td>
-      ` : `
-        <td><strong>${s.Day||'—'}</strong></td>
-        <td style="font-size:12px;white-space:nowrap">${fmtT(s.StartTime)}</td>
-        <td style="font-size:12px;white-space:nowrap">${fmtT(s.EndTime)}</td>
-        <td style="font-size:12px;font-style:italic">${s.Subject||'—'}</td>
-        <td style="font-size:12px">${s.CourseName||'—'}</td>
-        <td style="font-size:12px">${s.Section||'—'}</td>
-        <td><span class="b ${sm[s.Mode]||'b-n'}">${s.Mode==='Physical'?'🏫 Physical':'💻 Online'}</span></td>
-        <td style="font-size:11.5px;white-space:nowrap">${fmtRange(s)}</td>
-        <td style="font-size:12px">${s.Mode==='Physical'?(s.Room||'—'):'<a href="'+(s.Link||'#')+'" target="_blank" style="color:var(--teal)">'+(s.Link?'Join Link':'—')+'</a>'}</td>
-        <td style="display:flex;gap:3px">
-          <button class="btn btn-out btn-xs" onclick='editSlot(${JSON.stringify(s).replace(/'/g,"&#39;")})'>Edit</button>
-          <button class="btn btn-del btn-xs" onclick="delSlot('${s.SlotID}')">Del</button>
-        </td>
-      `}
-    </tr>`).join('')
-    : `<tr><td colspan="10"><div class="empty"><div class="ei">📅</div><h3>No slots yet — Add one!</h3></div></td></tr>`;
-}
 function renderTTWeeklyCards(slots){
   const el=document.getElementById('t-tt-weekly'); if(!el)return;
   if(!slots.length){el.innerHTML='<div class="empty"><div class="ei">📅</div><h3>No slots — Add one!</h3></div>';return;}
@@ -2727,7 +2624,7 @@ function renderTTWeeklyCards(slots){
       const isOnl=s.Mode==='Online';
       return`<div onclick='showSlotDetail(${JSON.stringify(s).replace(/'/g,"&#39;")})' style="display:flex;align-items:center;gap:9px;padding:9px 11px;border:1.5px solid ${isOnl?'#93c5fd':'#86efac'};border-radius:7px;margin-bottom:5px;cursor:pointer;background:${isOnl?'#eff6ff':'#f0fdf4'}">
         <div style="font-size:19px">${isOnl?'💻':'🏫'}</div>
-        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--navy)">${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}</div><div style="font-size:12px;font-weight:600">${s.Subject||''}</div><div style="font-size:11px;color:var(--muted)">${s.CourseName||''} · ${s.Section||''}</div></div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--navy)">${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}</div><div style="font-size:12px;font-weight:600">${s.Subject||''}</div><div style="font-size:11px;color:var(--muted)">${esc(s.CourseName||'')} · ${esc(s.Room||'')}</div></div>
         <span style="font-size:11px;font-weight:600;color:${isOnl?'#1e40af':'#166534'};background:${isOnl?'#dbeafe':'#dcfce7'};padding:2px 7px;border-radius:10px">${s.Mode}</span>
       </div>`;
     }).join('')}</div>`;
@@ -2745,124 +2642,16 @@ function showSlotDetail(s){
       <div style="font-size:16px;font-weight:700;color:var(--navy)">${s.Day}</div>
       <div style="font-size:20px;font-weight:700;color:${isOnl?'#1d4ed8':'var(--teal)'};margin:3px 0">${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}</div>
       <div style="font-size:13px;font-weight:600;margin:3px 0">${s.Subject||''}</div>
-      <div style="font-size:12px;color:var(--muted)">${s.CourseName||''} · ${s.Section||''}</div>
+      <div style="font-size:12px;color:var(--muted)">${esc(s.CourseName||'')} · ${esc(s.Room||'')}</div>
     </div>
     <div style="display:grid;gap:7px;font-size:12px">
       ${isOnl&&s.Link?`<div style="padding:7px;background:#dbeafe;border-radius:6px"><div style="color:var(--muted);font-size:10px;margin-bottom:3px">MEETING LINK</div><a href="${s.Link}" target="_blank" style="color:#1d4ed8;word-break:break-all">${s.Link}</a></div>`:''}
       ${!isOnl&&s.Room?`<div style="display:flex;justify-content:space-between;padding:7px;background:var(--bg);border-radius:6px"><span style="color:var(--muted)">Room</span><strong>${s.Room}</strong></div>`:''}
       ${s.Notes?`<div style="padding:7px;background:var(--gold-bg);border-radius:6px"><strong>Note:</strong> ${s.Notes}</div>`:''}
     </div>
-    <div style="display:flex;gap:7px;margin-top:11px">
-      <button class="btn btn-out btn-sm" style="flex:1;justify-content:center" onclick='editSlot(${JSON.stringify(s).replace(/'/g,"&#39;")})'>✏️ Edit</button>
-      <button class="btn btn-del btn-sm" style="flex:1;justify-content:center" onclick="delSlot('${s.SlotID}')">🗑️ Delete</button>
-    </div>`;
+    `;
 }
 
-// Slot modal
-function openSlotModal(){
-  document.getElementById('mslot-title').textContent='Add Class Slot';
-  document.getElementById('slot-edit-id').value='';
-  ['slot-sec','slot-subject','slot-room','slot-link','slot-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('slot-day').value='';document.getElementById('slot-from').value='';document.getElementById('slot-to').value='';
-  document.getElementById('slot-start').value='08:00';
-  document.getElementById('slot-end').value='09:00';
-  // populate dept
-  const dSel=document.getElementById('slot-dept');
-  while(dSel.options.length>1)dSel.remove(1);
-  DEPTS.forEach(d=>dSel.add(new Option(d.DeptName,d.DeptID)));
-  // lecturer list for admin
-  if(SESSION.user.role==='admin'){
-    const lSel=document.getElementById('slot-lec');
-    while(lSel.options.length>1)lSel.remove(1);
-    USERS_ALL.filter(u=>u.Role==='teacher').forEach(u=>lSel.add(new Option(u.FullName,u.UserID)));
-    document.getElementById('slot-lec-w').style.display='';
-  } else {
-    const u=SESSION.user;
-    document.getElementById('slot-lec').innerHTML=`<option value="${u.id}">${u.name}</option>`;
-    document.getElementById('slot-lec-w').style.display='none';
-    document.getElementById('slot-dept').value=u.deptId||'';
-    chainDeptCourse('slot-dept','slot-course').then(()=>{document.getElementById('slot-course').value=u.courseId||'';});
-    document.getElementById('slot-sec').value=u.section||'';
-  }
-  selMode('Physical');
-  openModal('mslot');
-}
-function editSlot(s){
-  document.getElementById('mslot-title').textContent='Edit Class Slot';
-  document.getElementById('slot-edit-id').value=s.SlotID;
-  document.getElementById('slot-day').value=s.Day;
-  document.getElementById('slot-start').value=s.StartTime;
-  document.getElementById('slot-end').value=s.EndTime;
-  document.getElementById('slot-room').value=s.Room||'';
-  document.getElementById('slot-link').value=s.Link||'';
-  document.getElementById('slot-notes').value=s.Notes||'';
-  document.getElementById('slot-from').value=s.EffectiveFrom||'';document.getElementById('slot-to').value=s.EffectiveTo||'';
-  document.getElementById('slot-sec').value=s.Section||'';
-  document.getElementById('slot-subject').value=s.Subject||'';
-  const dSel=document.getElementById('slot-dept');
-  while(dSel.options.length>1)dSel.remove(1);
-  DEPTS.forEach(d=>dSel.add(new Option(d.DeptName,d.DeptID)));
-  dSel.value=s.DeptID||'';
-  chainDeptCourse('slot-dept','slot-course').then(()=>{document.getElementById('slot-course').value=s.CourseID||'';});
-  if(SESSION.user.role==='admin'){
-    const lSel=document.getElementById('slot-lec');
-    while(lSel.options.length>1)lSel.remove(1);
-    USERS_ALL.filter(u=>u.Role==='teacher').forEach(u=>lSel.add(new Option(u.FullName,u.UserID)));
-    lSel.value=s.LecturerID;
-    document.getElementById('slot-lec-w').style.display='';
-  } else {
-    document.getElementById('slot-lec-w').style.display='none';
-  }
-  selMode(s.Mode||'Physical');
-  openModal('mslot');
-}
-function selMode(mode){
-  document.getElementById('slot-mode').value=mode;
-  const pEl=document.getElementById('mb-phys'),oEl=document.getElementById('mb-onl');
-  const rW=document.getElementById('slot-room-w'),lW=document.getElementById('slot-link-w');
-  if(mode==='Physical'){
-    pEl.className='mode-btn sel-phys';oEl.className='mode-btn';
-    document.getElementById('mb-phys-t').style.color='#fff';
-    document.getElementById('mb-onl-t').style.color='var(--muted)';
-    if(rW)rW.style.display='';if(lW)lW.style.display='none';
-  } else {
-    oEl.className='mode-btn sel-onl';pEl.className='mode-btn';
-    document.getElementById('mb-onl-t').style.color='#fff';
-    document.getElementById('mb-phys-t').style.color='var(--muted)';
-    if(rW)rW.style.display='none';if(lW)lW.style.display='';
-  }
-}
-function onSlotLecChange(){
-  const lecId=document.getElementById('slot-lec').value;
-  const u=USERS_ALL.find(x=>x.UserID===lecId); if(!u)return;
-  document.getElementById('slot-dept').value=u.DepartmentID||'';
-  chainDeptCourse('slot-dept','slot-course').then(()=>{document.getElementById('slot-course').value=u.CourseID||'';});
-  document.getElementById('slot-sec').value=u.Section||'';
-}
-async function saveSlot(){
-  const day=document.getElementById('slot-day').value;
-  const start=document.getElementById('slot-start').value;
-  const end=document.getElementById('slot-end').value;
-  const subject=document.getElementById('slot-subject').value.trim();
-  const mode=document.getElementById('slot-mode').value;
-  if(!day||!start||!end){toast('Day and time are required','warn');return;}
-  if(start>=end){toast('End time must be after the start time','warn');return;}
-  if(!subject){toast('Subject is required','warn');return;}
-  const wef=document.getElementById('slot-from').value,wto=document.getElementById('slot-to').value;
-  if(!wef||!wto){toast('W.E.F. date and end date are required','warn');return;}
-  if(wto<wef){toast('End date cannot be before the W.E.F. date','warn');return;}
-  const lecId=document.getElementById('slot-lec').value||SESSION.user.id;
-  const lecObj=USERS_ALL.find(u=>u.UserID===lecId);
-  const courseId=document.getElementById('slot-course').value;
-  const courseObj=COURSES.find(c=>c.CourseID===courseId);
-  const deptId=document.getElementById('slot-dept').value;
-  const deptObj=DEPTS.find(d=>d.DeptID===deptId);
-  const editId=document.getElementById('slot-edit-id').value;
-  const p={action:editId?'updateTimetableSlot':'addTimetableSlot',slotId:editId||undefined,lecturerId:lecId,lecturerName:lecObj?.FullName||SESSION.user.name,deptId,deptName:deptObj?.DeptName||'',courseId,courseName:courseObj?.CourseName||'',section:document.getElementById('slot-sec').value,subject,day,startTime:start,endTime:end,effectiveFrom:wef,effectiveTo:wto,mode,room:mode==='Physical'?document.getElementById('slot-room').value:'',link:mode==='Online'?document.getElementById('slot-link').value:'',notes:document.getElementById('slot-notes').value};
-  const r=await api(p);
-  if(r.ok){closeModal('mslot');toast(editId?'Slot updated!':'Slot added!','ok');const role=SESSION.user.role;if(role==='admin')loadAdminTT();else if(role==='teacher')loadTeacherTT();else loadCoordTT();}
-  else toast(r.error||'Save failed','err');
-}
 async function delSlot(id){
   if(!confirm('Delete this slot?'))return;
   const r=await api({action:'deleteTimetableSlot',slotId:id});
@@ -3236,17 +3025,6 @@ function printReportsSummary(){
   openPrint('Weekly reports summary',`<table class="ls"><thead><tr><th>Lecturer</th><th>Department</th><th>Course / Unit</th><th>Week</th><th>Date</th><th>Lessons</th><th>Year / Sem</th><th>Attendance</th><th>Status</th></tr></thead><tbody>${RPT_ROWS.map(r=>`<tr><td>${esc(r.LecturerName)}</td><td>${esc(r.DeptName||'—')}</td><td>${esc(r.CourseName||'—')}<br>${esc(unitLabel(r.CourseID,r.BookUnit))}</td><td>${esc(r.WeekNum)}</td><td>${weekRange(r)}</td><td>${esc(rangeShort(r))}</td><td>${esc(r.StudentYear||'—')} · ${esc(r.Semester||'—')}</td><td>${esc(r.Attendance||'—')}/${esc(r.TotalStudents||'—')}</td><td>${esc(r.Status)}</td></tr>`).join('')}</tbody></table>`);
 }
 // ── printable weekly timetable (per lecturer, with W.E.F. – end date) ──
-function printTimetable(){
-  if(!TT_CUR.length){toast('No timetable slots to print','warn');return;}
-  const g={};TT_CUR.forEach(s=>(g[s.LecturerID]=g[s.LecturerID]||[]).push(s));
-  const ord=s=>DAYS.indexOf(s.Day)*10000+(parseInt(String(s.StartTime||'0:0').replace(':',''),10)||0);
-  const body=Object.values(g).map((L,i,a)=>{
-    L.sort((x,y)=>ord(x)-ord(y));
-    const f=L.map(s=>s.EffectiveFrom).filter(Boolean).sort(),t=L.map(s=>s.EffectiveTo).filter(Boolean).sort();
-    const wef=f.length?fmtD(f[0])+' to '+(t.length?fmtD(t[t.length-1]):'open'):'—',depts=[...new Set(L.map(s=>s.DeptName).filter(Boolean))].join(', ');
-    return `<div class="${i<a.length-1?'pb':''}"><h2 style="margin:0 0 4px">${esc(L[0].LecturerName)}</h2><div style="margin-bottom:10px;color:#6b7280">${esc(depts)} &nbsp;|&nbsp; W.E.F. ${wef}</div><table class="ls"><thead><tr><th>Day</th><th>Time</th><th>Department</th><th>Course</th><th>Subject</th><th>Location / Link</th><th>Mode</th><th>W.E.F. – To</th></tr></thead><tbody>${L.map(s=>`<tr><td>${esc(s.Day)}</td><td>${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}</td><td>${esc(s.DeptName||'—')}</td><td>${esc(s.CourseName||'—')}${s.Section?' · '+esc(s.Section):''}</td><td>${esc(s.Subject||'—')}</td><td>${esc(s.Mode==='Physical'?(s.Room||'—'):(s.Link||'—'))}</td><td>${esc(s.Mode||'')}</td><td>${fmtRange(s)}</td></tr>`).join('')}</tbody></table></div>`;}).join('');
-  openPrint('Weekly timetable',body);
-}
 document.head.insertAdjacentHTML('beforeend','<style>'+RP_CSS+'</style>');
 
 // ════════════════════════════════════════════════════════════
@@ -3434,6 +3212,136 @@ async function loadTjReports(p){
 function printTjReports(){
   if(!TJ_ROWS.length){toast('No reports to print','warn');return;}
   openPrint('Tajweed course reports',`<table class="ls"><thead><tr><th>Lecturer</th><th>Course</th><th>Duration</th><th>From – To</th><th>Total strength</th><th>Present</th><th>Absent</th><th>Type</th></tr></thead><tbody>${TJ_ROWS.map(x=>`<tr><td>${esc(x.LecturerName)}</td><td>${esc(x.CourseName)}</td><td>${esc(x.Duration||'—')}</td><td>${fmtD(x.FromDate)} – ${fmtD(x.ToDate)}</td><td>${x.TotalStrength}</td><td>${x.Present}</td><td>${x.Absent}</td><td>${esc(x.GenderType)}</td></tr>`).join('')}</tbody></table>`);
+}
+
+// ════════════════════════════════════════════════════════════
+//  V3.5 — weekly timetable: roster, weekly load, permissions
+// ════════════════════════════════════════════════════════════
+let SLOT_COORD=new Set();
+const TT_PAL=[['#e0f2fe','#0369a1'],['#dcfce7','#15803d'],['#fef3c7','#b45309'],['#fce7f3','#be185d'],['#ede9fe','#6d28d9'],['#ffedd5','#c2410c'],['#cffafe','#0e7490'],['#fee2e2','#b91c1c'],['#e0e7ff','#4338ca'],['#ecfccb','#4d7c0f']];
+const AV_PAL=[['#1a2744','#2d3f6e'],['#1d6e63','#24897b'],['#9333ea','#c084fc'],['#c2410c','#fb923c'],['#be185d','#f472b6'],['#0369a1','#38bdf8'],['#4d7c0f','#a3e635'],['#b45309','#fbbf24']];
+const hashN=s=>{let n=0;for(const c of String(s||''))n=(n*31+c.charCodeAt(0))%9973;return n;};
+const courseColor=cid=>TT_PAL[hashN(cid)%TT_PAL.length];
+function slotHours(s){const m=t=>{const x=/^(\d{1,2}):(\d{2})/.exec(String(t||''));return x?+x[1]*60+ +x[2]:0;};return Math.max(0,(m(s.EndTime)-m(s.StartTime))/60);}
+const loadTier=h=>h>20?['#dc2626','#fb923c']:h>12?['#d97706','#fbbf24']:['#1d6e63','#34d399'];
+function ttGroups(slots){const g={};slots.forEach(s=>{const x=g[s.LecturerID]=g[s.LecturerID]||{id:s.LecturerID,name:s.LecturerName||'—',dept:s.DeptName||'',slots:[],hours:0};x.slots.push(s);x.hours+=slotHours(s);});return Object.values(g).sort((a,b)=>String(a.name).localeCompare(String(b.name)));}
+const tmin=t=>{const x=/^(\d{1,2}):(\d{2})/.exec(String(t||''));return x?+x[1]*60+ +x[2]:0;};
+function renderTTStats(p,slots){
+  const G=ttGroups(slots),tot=G.reduce((t,x)=>t+x.hours,0),top=G.slice().sort((a,b)=>b.hours-a.hours)[0];
+  document.getElementById('tt-'+p+'-stats').innerHTML=statCards([['🗓️','Weekly slots',slots.length],['👩‍🏫','Teachers',G.length],['⏱️','Total weekly hours',fmtH(tot)],['📊','Average per teacher',G.length?fmtH(tot/G.length)+' h':'—'],['🔥','Highest load',top?fmtH(top.hours)+' h':'—']]);
+}
+function renderTTLoad(p,slots){
+  const G=ttGroups(slots).sort((a,b)=>b.hours-a.hours),max=Math.max(1,...G.map(x=>x.hours));
+  document.getElementById('tt-'+p+'-load').innerHTML=G.length?G.map(x=>{const t=loadTier(x.hours),w=Math.max(3,Math.round(x.hours/max*100));
+    return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px"><div style="width:200px;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.name)}<div style="font-size:10.5px;color:var(--muted);font-weight:400">${esc(x.dept)}</div></div><div style="flex:1;background:#eef0f4;border-radius:8px;height:18px;overflow:hidden"><div style="height:100%;width:${w}%;background:linear-gradient(90deg,${t[0]},${t[1]});border-radius:8px"></div></div><div style="width:130px;text-align:right;font-size:13px"><b>${fmtH(x.hours)} h</b><span style="color:var(--muted);font-size:11px"> · ${x.slots.length} classes</span></div></div>`;}).join(''):'<div class="empty" style="padding:18px"><div class="ei">⚡</div><h3>No timetable slots for this selection</h3></div>';
+}
+function renderTTRoster(p,slots){
+  const G=ttGroups(slots),max=Math.max(1,...G.map(x=>x.hours)),cs={};
+  slots.forEach(s=>cs[s.CourseID]=s.CourseName);
+  document.getElementById('tt-'+p+'-legend').innerHTML=Object.keys(cs).map(id=>{const c=courseColor(id);return `<span style="background:${c[0]};color:${c[1]}">${esc(cs[id])}</span>`;}).join('');
+  let h='<table class="ttr"><thead><tr><th style="text-align:left;padding-left:14px">Teacher</th>'+DAYS.map(d=>`<th>${d.slice(0,3).toUpperCase()}</th>`).join('')+'<th style="min-width:140px">Weekly load</th></tr></thead><tbody>';
+  G.forEach(x=>{
+    const av=AV_PAL[hashN(x.id)%AV_PAL.length],t=loadTier(x.hours),w=Math.max(3,Math.round(x.hours/max*100));
+    h+=`<tr><td class="tn"><div style="display:flex;align-items:center;gap:10px"><div class="avt" style="background:linear-gradient(135deg,${av[0]},${av[1]})">${esc(initials(x.name))}</div><div><div style="font-weight:700;font-size:13px">${esc(x.name)}</div><div style="font-size:10.5px;color:var(--muted)">${esc(x.dept)}</div></div></div></td>`;
+    DAYS.forEach(d=>{
+      const ds=x.slots.filter(s=>s.Day===d).sort((a,b)=>tmin(a.StartTime)-tmin(b.StartTime));
+      h+='<td>'+ds.map(s=>{const c=courseColor(s.CourseID);return `<div class="ttc" style="background:${c[0]};border-left:3px solid ${c[1]};color:${c[1]}"><b>${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}</b>${esc(s.CourseName||'')}<div class="s">${esc([s.StudentYear,s.Semester].filter(Boolean).join(' · '))}</div><div class="s">📍 ${esc(s.Room||'—')}</div></div>`;}).join('')+'</td>';
+    });
+    h+=`<td><div style="font-size:14px;font-weight:700;color:${t[0]}">${fmtH(x.hours)} h</div><div style="font-size:10.5px;color:var(--muted)">${x.slots.length} classes</div><div class="ldb"><div style="width:${w}%;background:linear-gradient(90deg,${t[0]},${t[1]})"></div></div></td></tr>`;
+  });
+  h+='</tbody></table>';
+  document.getElementById('tt-'+p+'-roster').innerHTML=G.length?h:'<div class="empty"><div class="ei">🗓️</div><h3>No timetable slots for this selection</h3></div>';
+}
+function renderTTList(slots,tbId,mode){
+  const tb=document.getElementById(tbId);if(!tb)return;
+  const L=slots.slice().sort((a,b)=>String(a.LecturerName).localeCompare(String(b.LecturerName))||DAYS.indexOf(a.Day)-DAYS.indexOf(b.Day)||tmin(a.StartTime)-tmin(b.StartTime));
+  const cols=mode==='admin'?10:mode==='coord'?8:7;
+  tb.innerHTML=L.length?L.map(s=>{
+    const c=courseColor(s.CourseID),course=`<span class="b" style="background:${c[0]};color:${c[1]}">${esc(s.CourseName||'—')}</span>`,when=`<td><strong>${esc(s.Day)}</strong></td><td style="font-size:12px;white-space:nowrap">${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}</td>`;
+    const ys=`<td style="font-size:12px">${esc(s.StudentYear||'—')}<div style="color:var(--muted)">${esc(s.Semester||'')}</div></td>`,loc=`<td style="font-size:12px">${esc(s.Room||'—')}</td>`,rg=`<td style="font-size:11.5px;white-space:nowrap">${fmtRange(s)}</td>`;
+    if(mode==='teacher')return `<tr>${when}<td>${course}</td><td style="font-size:12px">${esc(s.DeptName||'—')}</td>${ys}${loc}${rg}</tr>`;
+    return `<tr><td><strong>${esc(s.LecturerName||'—')}</strong></td><td style="font-size:12px">${esc(s.DeptName||'—')}</td><td>${course}</td>${ys}${when}${loc}${rg}`+(mode==='admin'?`<td style="font-size:11.5px;color:var(--muted)">${esc(s.CoordNames||'—')}</td><td style="display:flex;gap:4px"><button class="btn btn-out btn-xs" onclick="editSlotId('${esc(s.SlotID)}')">Edit</button><button class="btn btn-del btn-xs" onclick="delSlot('${esc(s.SlotID)}')">Delete</button></td>`:'')+'</tr>';
+  }).join(''):`<tr><td colspan="${cols}"><div class="empty"><div class="ei">📅</div><h3>No timetable slots</h3></div></td></tr>`;
+}
+async function ttLoad(p){
+  const g=id=>document.getElementById('tt-'+p+'-'+id);
+  if(!USERS_ALL.length){const ur=await api({action:'getUsers'});if(ur.ok)USERS_ALL=ur.users;}
+  fillOpts('tt-'+p+'-lec',USERS_ALL.filter(x=>x.Role==='teacher').map(x=>[x.UserID,x.FullName]));
+  if(p==='admin'){fillOpts('tt-admin-dept',DEPTS.map(d=>[d.DeptID,d.DeptName]));fillOpts('tt-admin-course',COURSES.map(c=>[c.CourseID,c.CourseName]));}
+  const dt=g('date');if(!dt.dataset.init){dt.value=ymdNow();dt.dataset.init='1';}
+  const q={action:'getTimetable',lecturerId:g('lec').value,day:g('day').value,activeOn:dt.value};
+  if(p==='admin'){q.deptId=g('dept').value;q.courseId=g('course').value;q.studentYear=g('year').value;q.semester=g('sem').value;}
+  const r=await api(q);if(!r.ok){toast(r.error||'Failed to load the timetable','err');return;}
+  TT_CUR=r.slots||[];
+  renderTTStats(p,TT_CUR);renderTTLoad(p,TT_CUR);renderTTRoster(p,TT_CUR);renderTTList(TT_CUR,'tt-'+p+'-tbl',p);
+}
+function loadAdminTT(){return ttLoad('admin');}
+function loadCoordTT(){return ttLoad('coord');}
+// ── add / edit slot (administrator edits; coordinators add) ──
+function slotLecList(){const u=SESSION.user;return USERS_ALL.filter(x=>x.Role==='teacher'&&x.Status==='active'&&(u.role!=='coordinator'||x.CoordinatorID===u.id));}
+function fillSlotCourses(lecId){const u=USERS_ALL.find(x=>x.UserID===lecId),v=String((u&&u.CourseIDs)||''),list=(!lecId||!v||v==='ALL')?COURSES:COURSES.filter(c=>v.split(',').includes(c.CourseID));fillOpts('slot-course',list.map(c=>[c.CourseID,c.CourseName]));}
+function renderSlotCoords(){
+  const el=document.getElementById('slot-coord-list'),C=USERS_ALL.filter(x=>x.Role==='coordinator'&&x.Status==='active');
+  el.innerHTML=C.length?C.map(c=>`<label style="display:flex;gap:6px;align-items:center;font-size:13px;cursor:pointer"><input type="checkbox" ${SLOT_COORD.has(c.UserID)?'checked':''} onchange="toggleSlotCoord('${esc(c.UserID)}',this.checked)">${esc(c.FullName)}</label>`).join(''):'<span style="font-size:12px;color:var(--muted)">No coordinators found</span>';
+}
+function toggleSlotCoord(id,on){if(on)SLOT_COORD.add(id);else SLOT_COORD.delete(id);}
+function onSlotLecChange(){
+  const g=i=>document.getElementById(i),id=g('slot-lec').value,u=USERS_ALL.find(x=>x.UserID===id);
+  fillSlotCourses(id);if(!u)return;
+  if(u.DepartmentID)g('slot-dept').value=u.DepartmentID;
+  if(!g('slot-edit-id').value){SLOT_COORD=new Set(u.CoordinatorID?[u.CoordinatorID]:[]);renderSlotCoords();}
+}
+async function openSlotModal(){
+  if(!['admin','coordinator'].includes(SESSION.user.role))return;
+  if(!USERS_ALL.length){const ur=await api({action:'getUsers'});if(ur.ok)USERS_ALL=ur.users;}
+  const g=i=>document.getElementById(i);
+  g('slot-edit-id').value='';g('mslot-title').textContent='Add Timetable Slot';
+  ['slot-day','slot-from','slot-to','slot-year','slot-sem','slot-room'].forEach(i=>g(i).value='');
+  g('slot-start').value='08:00';g('slot-end').value='09:00';
+  fillOpts('slot-lec',slotLecList().map(x=>[x.UserID,x.FullName]));g('slot-lec').value='';
+  fillOpts('slot-dept',DEPTS.map(d=>[d.DeptID,d.DeptName]));g('slot-dept').value='';
+  fillSlotCourses('');g('slot-course').value='';
+  SLOT_COORD=new Set();renderSlotCoords();g('slot-coord-w').style.display=SESSION.user.role==='admin'?'':'none';
+  openModal('mslot');
+}
+async function editSlot(s){
+  if(SESSION.user.role!=='admin'||!s)return;
+  if(!USERS_ALL.length){const ur=await api({action:'getUsers'});if(ur.ok)USERS_ALL=ur.users;}
+  const g=i=>document.getElementById(i);
+  g('slot-edit-id').value=s.SlotID;g('mslot-title').textContent='Edit Timetable Slot';
+  fillOpts('slot-lec',USERS_ALL.filter(x=>x.Role==='teacher').map(x=>[x.UserID,x.FullName]));g('slot-lec').value=s.LecturerID;
+  fillOpts('slot-dept',DEPTS.map(d=>[d.DeptID,d.DeptName]));g('slot-dept').value=s.DeptID||'';
+  fillSlotCourses(s.LecturerID);g('slot-course').value=s.CourseID||'';
+  g('slot-day').value=s.Day;g('slot-from').value=s.EffectiveFrom||'';g('slot-to').value=s.EffectiveTo||'';
+  g('slot-start').value=s.StartTime;g('slot-end').value=s.EndTime;g('slot-year').value=s.StudentYear||'';g('slot-sem').value=s.Semester||'';g('slot-room').value=s.Room||'';
+  SLOT_COORD=new Set(s.CoordIds||[]);renderSlotCoords();g('slot-coord-w').style.display='';
+  openModal('mslot');
+}
+function editSlotId(id){editSlot(TT_CUR.find(s=>s.SlotID===id));}
+async function saveSlot(){
+  const g=i=>document.getElementById(i).value,id=g('slot-edit-id');
+  const need=[['slot-lec','teacher'],['slot-day','day'],['slot-from','from date'],['slot-to','to date'],['slot-start','from time'],['slot-end','to time'],['slot-course','course'],['slot-dept','department'],['slot-year','year'],['slot-sem','semester']];
+  for(const [i,n] of need){if(!g(i)){toast('Please select the '+n,'warn');return;}}
+  if(!g('slot-room').trim()){toast('Please enter the class location / block name','warn');return;}
+  if(g('slot-to')<g('slot-from')){toast('To date cannot be before the from date','warn');return;}
+  if(g('slot-end')<=g('slot-start')){toast('To time must be after the from time','warn');return;}
+  const b=document.getElementById('slot-save');b.disabled=true;
+  const r=await api({action:id?'updateTimetableSlot':'addTimetableSlot',slotId:id,lecturerId:g('slot-lec'),day:g('slot-day'),effectiveFrom:g('slot-from'),effectiveTo:g('slot-to'),startTime:g('slot-start'),endTime:g('slot-end'),courseId:g('slot-course'),deptId:g('slot-dept'),studentYear:g('slot-year'),semester:g('slot-sem'),room:g('slot-room'),coordinatorIds:SESSION.user.role==='admin'?[...SLOT_COORD]:undefined});
+  b.disabled=false;
+  if(!r.ok){toast(r.error||'Save failed','err');return;}
+  closeModal('mslot');toast(id?'Slot updated':'Slot added','ok');
+  if(SESSION.user.role==='admin')loadAdminTT();else loadCoordTT();
+}
+function printTimetable(){
+  if(!TT_CUR.length){toast('No timetable slots to print','warn');return;}
+  const g={};TT_CUR.forEach(s=>(g[s.LecturerID]=g[s.LecturerID]||[]).push(s));
+  const ord=s=>DAYS.indexOf(s.Day)*10000+tmin(s.StartTime);
+  const body=Object.values(g).sort((a,b)=>String(a[0].LecturerName).localeCompare(String(b[0].LecturerName))).map((L,i,a)=>{
+    L.sort((x,y)=>ord(x)-ord(y));
+    const f=L.map(s=>s.EffectiveFrom).filter(Boolean).sort(),t=L.map(s=>s.EffectiveTo).filter(Boolean).sort(),hrs=L.reduce((n,s)=>n+slotHours(s),0);
+    const wef=f.length?fmtD(f[0])+' to '+(t.length?fmtD(t[t.length-1]):'open'):'—';
+    return `<div class="${i<a.length-1?'pb':''}"><h2 style="margin:0 0 4px">${esc(L[0].LecturerName)}</h2><div style="margin-bottom:10px;color:#6b7280">W.E.F. ${wef} &nbsp;|&nbsp; ${L.length} classes · ${fmtH(hrs)} hours per week</div><table class="ls"><thead><tr><th>Day</th><th>Time</th><th>Course / Subject</th><th>Department</th><th>Year / Semester</th><th>Location / Block</th><th>From – To date</th></tr></thead><tbody>${L.map(s=>`<tr><td>${esc(s.Day)}</td><td>${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}</td><td>${esc(s.CourseName||'—')}</td><td>${esc(s.DeptName||'—')}</td><td>${esc(s.StudentYear||'—')} · ${esc(s.Semester||'—')}</td><td>${esc(s.Room||'—')}</td><td>${fmtRange(s)}</td></tr>`).join('')}</tbody></table></div>`;}).join('');
+  openPrint('Weekly timetable',body);
 }
 </script>
 </body>
