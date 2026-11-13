@@ -212,7 +212,7 @@ function setupSheets() {
     [SH.TIMETABLE]: [
       'SlotID','LecturerID','LecturerName','DeptID','DeptName',
       'CourseID','CourseName','Section','Subject',
-      'Day','StartTime','EndTime','Mode','Room','Link','Notes','CreatedAt','UpdatedAt','EffectiveFrom','EffectiveTo'
+      'Day','StartTime','EndTime','Mode','Room','Link','Notes','CreatedAt','UpdatedAt','EffectiveFrom','EffectiveTo','StudentYear','Semester','CoordinatorIDs'
     ],
   };
 
@@ -816,145 +816,6 @@ function getLogs(caller) {
 // ============================================================
 //  TIMETABLE FUNCTIONS
 // ============================================================
-function getTimetable(caller, body) {
-  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(SH.TIMETABLE);
-  if (!sheet) return { ok:false, error:'Timetable sheet not found. Run setupSheets() first.' };
-
-  const data    = sheet.getDataRange().getValues();
-  const headers = data[0];
-  let slots = data.slice(1).map(r => rowToObj(headers, r)).filter(s => s.SlotID);
-  slots.forEach(s => { s.StartTime = hmTz(s.StartTime, ss); s.EndTime = hmTz(s.EndTime, ss); s.EffectiveFrom = ymdTz(s.EffectiveFrom, ss); s.EffectiveTo = ymdTz(s.EffectiveTo, ss); });   // time cells -> 'HH:mm'
-
-  // Lecturers see only their own slots
-  if (caller.role === 'teacher') {
-    slots = slots.filter(s => s.LecturerID === caller.id);
-  }
-  // Coordinators see their dept
-  if (caller.role === 'coordinator') {
-    const uSheet  = ss.getSheetByName(SH.USERS);
-    const uData   = uSheet.getDataRange().getValues();
-    const uH      = uData[0];
-    const myLecIds = uData.slice(1)
-      .filter(r => r[uH.indexOf('CoordinatorID')] === caller.id)
-      .map(r => r[uH.indexOf('UserID')]);
-    slots = slots.filter(s => myLecIds.includes(s.LecturerID));
-  }
-
-  // Filters
-  if (body.deptId)      slots = slots.filter(s => s.DeptID     === body.deptId);
-  if (body.courseId)    slots = slots.filter(s => s.CourseID   === body.courseId);
-  if (body.day)         slots = slots.filter(s => s.Day        === body.day);
-  if (body.mode)        slots = slots.filter(s => s.Mode       === body.mode);
-  if (body.lecturerId)  slots = slots.filter(s => s.LecturerID === body.lecturerId);
-  if (body.activeOn)    slots = slots.filter(s => (!s.EffectiveFrom || s.EffectiveFrom <= body.activeOn) && (!s.EffectiveTo || s.EffectiveTo >= body.activeOn));
-
-  return { ok:true, slots };
-}
-
-function addTimetableSlot(caller, body) {
-  if (!['admin','teacher','coordinator'].includes(caller.role)) return { ok:false, error:'Forbidden' };
-  if (body.effectiveFrom && body.effectiveTo && body.effectiveTo < body.effectiveFrom) return { ok:false, error:'End date cannot be before the W.E.F. date.' };
-  // Teachers can only add for themselves
-  if (caller.role === 'teacher' && body.lecturerId !== caller.id) {
-    body.lecturerId = caller.id;
-  }
-
-  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(SH.TIMETABLE);
-  if (!sheet) return { ok:false, error:'Timetable sheet not found. Run setupSheets() first.' };
-
-  if (caller.role === 'teacher' && !courseAllowed(ss, caller.id, body.courseId)) return { ok:false, error:'This course is not assigned to you. Please contact the administrator.' };
-  const slotId = 'SLT' + String(Date.now()).slice(-8);
-  sheet.appendRow([
-    slotId,
-    body.lecturerId   || '',
-    body.lecturerName || '',
-    body.deptId       || '',
-    body.deptName     || '',
-    body.courseId     || '',
-    body.courseName   || '',
-    body.section      || '',
-    body.subject      || '',
-    body.day          || '',
-    body.startTime    || '',
-    body.endTime      || '',
-    body.mode         || 'Physical',
-    body.room         || '',
-    body.link         || '',
-    body.notes        || '',
-    now(), now()
-  ]);
-
-  const tH = ensureCols(sheet, TT_NEW_COLS), tr = sheet.getLastRow();   // keep times/dates as plain text
-  [['StartTime', body.startTime], ['EndTime', body.endTime], ['EffectiveFrom', body.effectiveFrom], ['EffectiveTo', body.effectiveTo]].forEach(([c, v]) => sheet.getRange(tr, tH.indexOf(c) + 1).setNumberFormat('@').setValue(v || ''));
-  writeLog(ss, caller.id, caller.username, caller.role, 'Add Timetable Slot',
-    `${body.lecturerName||caller.username} — ${body.day} ${body.startTime}–${body.endTime}`);
-  return { ok:true, slotId };
-}
-
-function updateTimetableSlot(caller, body) {
-  if (body.effectiveFrom && body.effectiveTo && body.effectiveTo < body.effectiveFrom) return { ok:false, error:'End date cannot be before the W.E.F. date.' };
-  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(SH.TIMETABLE);
-  if (!sheet) return { ok:false, error:'Timetable sheet not found.' };
-  ensureCols(sheet, TT_NEW_COLS);
-
-  const data    = sheet.getDataRange().getValues();
-  const headers = data[0];
-
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === body.slotId) {
-      // Teachers can only edit their own slots
-      if (caller.role === 'teacher' && data[i][1] !== caller.id) {
-        return { ok:false, error:'You can only edit your own slots.' };
-      }
-      const row = i + 1;
-      const setCol = (col, val) => { if (val === undefined) return; const cell = sheet.getRange(row, headers.indexOf(col)+1); if (['StartTime','EndTime','EffectiveFrom','EffectiveTo'].includes(col)) cell.setNumberFormat('@'); cell.setValue(val); };
-      setCol('LecturerName', body.lecturerName);
-      setCol('DeptID',       body.deptId);
-      setCol('DeptName',     body.deptName);
-      setCol('CourseID',     body.courseId);
-      setCol('CourseName',   body.courseName);
-      setCol('Section',      body.section);
-      setCol('Subject',      body.subject);
-      setCol('Day',          body.day);
-      setCol('StartTime',    body.startTime);
-      setCol('EndTime',      body.endTime);
-      setCol('EffectiveFrom', body.effectiveFrom);
-      setCol('EffectiveTo',   body.effectiveTo);
-      setCol('Mode',         body.mode);
-      setCol('Room',         body.room);
-      setCol('Link',         body.link);
-      setCol('Notes',        body.notes);
-      sheet.getRange(row, headers.indexOf('UpdatedAt')+1).setValue(now());
-      writeLog(ss, caller.id, caller.username, caller.role, 'Update Timetable Slot', body.slotId);
-      return { ok:true };
-    }
-  }
-  return { ok:false, error:'Slot not found' };
-}
-
-function deleteTimetableSlot(caller, body) {
-  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(SH.TIMETABLE);
-  if (!sheet) return { ok:false, error:'Timetable sheet not found.' };
-
-  const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === body.slotId) {
-      // Teachers can only delete their own slots
-      if (caller.role === 'teacher' && data[i][1] !== caller.id) {
-        return { ok:false, error:'You can only delete your own slots.' };
-      }
-      sheet.deleteRow(i + 1);
-      writeLog(ss, caller.id, caller.username, caller.role, 'Delete Timetable Slot', body.slotId);
-      return { ok:true };
-    }
-  }
-  return { ok:false, error:'Slot not found' };
-}
-
 // ============================================================
 //  HELPER FUNCTIONS
 // ============================================================
@@ -1405,7 +1266,7 @@ function hmTz(v, ss) {
 // ============================================================
 //  V3.2 — courses, unit headings, timetable dates, coordinator assignment
 // ============================================================
-const TT_NEW_COLS = ['EffectiveFrom','EffectiveTo'];
+const TT_NEW_COLS = ['EffectiveFrom','EffectiveTo','StudentYear','Semester','CoordinatorIDs'];
 function ymdTz(v, ss) {
   if (v instanceof Date) return Utilities.formatDate(v, ss.getSpreadsheetTimeZone(), 'yyyy-MM-dd');
   return String(v || '').slice(0, 10);
@@ -1771,4 +1632,129 @@ function getTajweedReports(caller, body) {
   if (body.gender)     rows = rows.filter(o => o.GenderType === body.gender);
   rows.sort((a, b) => String(b.UpdatedAt).localeCompare(String(a.UpdatedAt)));
   return { ok:true, reports:rows };
+}
+
+// ============================================================
+//  V3.5 — weekly timetable
+//  Teacher: view only · Coordinator: add only · Admin: add / edit / delete
+//  Each slot lists the coordinators it is shown to (CoordinatorIDs; '-' = none, '' = the teacher's own coordinator)
+// ============================================================
+const TT_DAYS  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const TT_YEARS = ['1st Year','2nd Year','3rd Year','4th Year','5th Year'];
+const TT_SEMS  = ['Semester 1','Semester 2','Semester 3','Semester 4','Semester 5','Semester 6','Semester 7','Semester 8'];
+
+function ttBuild(ss, caller, body, selfId) {
+  const U = ss.getSheetByName(SH.USERS).getDataRange().getValues(), uh = U[0], ix = n => uh.indexOf(n);
+  const lec = U.slice(1).find(r => r[ix('UserID')] === body.lecturerId);
+  if (!lec || lec[ix('Role')] !== 'teacher') return { err:'Please select a teacher.' };
+  if (caller.role === 'coordinator' && lec[ix('CoordinatorID')] !== caller.id) return { err:'You can only add slots for your own lecturers.' };
+  if (!TT_DAYS.includes(body.day)) return { err:'Please select a day.' };
+  if (!ymdOk(body.effectiveFrom) || !ymdOk(body.effectiveTo)) return { err:'From date and To date are required.' };
+  if (dayDiff(body.effectiveFrom, body.effectiveTo) < 0) return { err:'To date cannot be before the From date.' };
+  const s = toMin(body.startTime), e = toMin(body.endTime);
+  if (s === null || e === null) return { err:'From time and To time are required.' };
+  if (e <= s) return { err:'To time must be after the From time.' };
+  if (!body.courseId) return { err:'Please select a course.' };
+  const cd = ss.getSheetByName(SH.COURSES).getDataRange().getValues(), ch = cd[0];
+  if (!cd.slice(1).some(r => r[ch.indexOf('CourseID')] === body.courseId && r[ch.indexOf('Status')] === 'active')) return { err:'The selected course was not found.' };
+  if (!courseAllowed(ss, body.lecturerId, body.courseId)) return { err:'This course is not assigned to the selected teacher.' };
+  if (!body.deptId) return { err:'Please select a department.' };
+  if (!TT_YEARS.includes(body.studentYear)) return { err:'Please select the year.' };
+  if (!TT_SEMS.includes(body.semester)) return { err:'Please select the semester.' };
+  const room = String(body.room || '').trim().slice(0, 120);
+  if (!room) return { err:'Class location / block name is required.' };
+  const coords = U.slice(1).filter(r => r[ix('Role')] === 'coordinator').map(r => r[ix('UserID')]);
+  let ids;
+  if (caller.role === 'coordinator') ids = [caller.id];
+  else if (Array.isArray(body.coordinatorIds)) ids = body.coordinatorIds.filter(id => coords.includes(id));
+  else ids = lec[ix('CoordinatorID')] ? [lec[ix('CoordinatorID')]] : [];
+  const T = ss.getSheetByName(SH.TIMETABLE).getDataRange().getValues(), th = T[0];
+  const clash = T.slice(1).map(r => rowToObj(th, r)).find(o => {
+    if (!o.SlotID || o.SlotID === selfId || o.LecturerID !== body.lecturerId || o.Day !== body.day) return false;
+    const os = toMin(hmTz(o.StartTime, ss)), oe = toMin(hmTz(o.EndTime, ss));
+    if (os === null || oe === null) return false;
+    const of = ymdTz(o.EffectiveFrom, ss) || '0000-01-01', ot = ymdTz(o.EffectiveTo, ss) || '9999-12-31';
+    return os < e && s < oe && body.effectiveFrom <= ot && of <= body.effectiveTo;
+  });
+  if (clash) return { err:'This teacher already has a class on ' + body.day + ' (' + hmTz(clash.StartTime, ss) + '–' + hmTz(clash.EndTime, ss) + ') in the same period.' };
+  const cname = getCourseName(ss, body.courseId);
+  return { rec:{ LecturerID:body.lecturerId, LecturerName:lec[ix('FullName')], DeptID:body.deptId, DeptName:getDeptName(ss, body.deptId),
+    CourseID:body.courseId, CourseName:cname, Subject:cname, StudentYear:body.studentYear, Semester:body.semester, Day:body.day,
+    StartTime:body.startTime, EndTime:body.endTime, Room:room, EffectiveFrom:body.effectiveFrom, EffectiveTo:body.effectiveTo,
+    CoordinatorIDs:ids.length ? ids.join(',') : '-' } };
+}
+function ttTextCells(sh, h, rowNo, o) {
+  ['StartTime','EndTime','EffectiveFrom','EffectiveTo'].forEach(c => sh.getRange(rowNo, h.indexOf(c) + 1).setNumberFormat('@').setValue(o[c] || ''));
+}
+function getTimetable(caller, body) {
+  body = body || {};
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sheet = ss.getSheetByName(SH.TIMETABLE);
+  if (!sheet) return { ok:false, error:'Timetable sheet not found. Run setupSheets() first.' };
+  const data = sheet.getDataRange().getValues(), headers = data[0];
+  const U = ss.getSheetByName(SH.USERS).getDataRange().getValues(), uh = U[0];
+  const uname = {}, ucoord = {};
+  U.slice(1).forEach(r => { uname[r[uh.indexOf('UserID')]] = r[uh.indexOf('FullName')]; ucoord[r[uh.indexOf('UserID')]] = r[uh.indexOf('CoordinatorID')]; });
+  let slots = data.slice(1).map(r => rowToObj(headers, r)).filter(s => s.SlotID);
+  slots.forEach(s => {
+    s.StartTime = hmTz(s.StartTime, ss); s.EndTime = hmTz(s.EndTime, ss);
+    s.EffectiveFrom = ymdTz(s.EffectiveFrom, ss); s.EffectiveTo = ymdTz(s.EffectiveTo, ss);
+    s.StudentYear = s.StudentYear || ''; s.Semester = s.Semester || '';
+    s.CoordIds = String(s.CoordinatorIDs || '').split(',').filter(x => x && x !== '-');
+    s.CoordNames = s.CoordIds.map(id => uname[id] || id).join(', ');
+  });
+  if (caller.role === 'teacher') slots = slots.filter(s => s.LecturerID === caller.id);
+  if (caller.role === 'coordinator')
+    slots = slots.filter(s => s.CoordIds.includes(caller.id) || (!String(s.CoordinatorIDs || '').trim() && ucoord[s.LecturerID] === caller.id));
+  if (body.deptId)      slots = slots.filter(s => s.DeptID      === body.deptId);
+  if (body.courseId)    slots = slots.filter(s => s.CourseID    === body.courseId);
+  if (body.day)         slots = slots.filter(s => s.Day         === body.day);
+  if (body.mode)        slots = slots.filter(s => s.Mode        === body.mode);
+  if (body.lecturerId)  slots = slots.filter(s => s.LecturerID  === body.lecturerId);
+  if (body.studentYear) slots = slots.filter(s => s.StudentYear === body.studentYear);
+  if (body.semester)    slots = slots.filter(s => s.Semester    === body.semester);
+  if (body.activeOn)    slots = slots.filter(s => (!s.EffectiveFrom || s.EffectiveFrom <= body.activeOn) && (!s.EffectiveTo || s.EffectiveTo >= body.activeOn));
+  return { ok:true, slots };
+}
+function addTimetableSlot(caller, body) {
+  if (!['admin', 'coordinator'].includes(caller.role)) return { ok:false, error:'Only the administrator or a coordinator can add timetable slots.' };
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sheet = ss.getSheetByName(SH.TIMETABLE);
+    if (!sheet) return { ok:false, error:'Timetable sheet not found. Run setupSheets() first.' };
+    const h = ensureCols(sheet, TT_NEW_COLS), b = ttBuild(ss, caller, body, '');
+    if (b.err) return { ok:false, error:b.err };
+    const o = Object.assign({ SlotID:'SLT' + String(Date.now()).slice(-8), Mode:'Physical', Link:'', Notes:'', Section:'', CreatedAt:now(), UpdatedAt:now() }, b.rec);
+    sheet.appendRow(h.map(c => o[c] !== undefined ? o[c] : ''));
+    ttTextCells(sheet, h, sheet.getLastRow(), o);
+    writeLog(ss, caller.id, caller.username, caller.role, 'Add Timetable Slot', `${o.LecturerName} — ${o.Day} ${o.StartTime}–${o.EndTime}`);
+    return { ok:true, slotId:o.SlotID };
+  } finally { lock.releaseLock(); }
+}
+function updateTimetableSlot(caller, body) {
+  if (caller.role !== 'admin') return { ok:false, error:'Only the administrator can edit timetable slots.' };
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sheet = ss.getSheetByName(SH.TIMETABLE);
+    if (!sheet) return { ok:false, error:'Timetable sheet not found.' };
+    const h = ensureCols(sheet, TT_NEW_COLS), data = sheet.getDataRange().getValues();
+    const i = data.findIndex((r, k) => k > 0 && r[h.indexOf('SlotID')] === body.slotId);
+    if (i < 0) return { ok:false, error:'Slot not found' };
+    const b = ttBuild(ss, caller, body, body.slotId);
+    if (b.err) return { ok:false, error:b.err };
+    const o = Object.assign(rowToObj(h, data[i]), b.rec, { UpdatedAt:now() });
+    sheet.getRange(i + 1, 1, 1, h.length).setValues([h.map(c => o[c] !== undefined ? o[c] : '')]);
+    ttTextCells(sheet, h, i + 1, o);
+    writeLog(ss, caller.id, caller.username, caller.role, 'Update Timetable Slot', body.slotId);
+    return { ok:true };
+  } finally { lock.releaseLock(); }
+}
+function deleteTimetableSlot(caller, body) {
+  if (caller.role !== 'admin') return { ok:false, error:'Only the administrator can delete timetable slots.' };
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sheet = ss.getSheetByName(SH.TIMETABLE);
+  if (!sheet) return { ok:false, error:'Timetable sheet not found.' };
+  const data = sheet.getDataRange().getValues(), i = data.findIndex((r, k) => k > 0 && r[0] === body.slotId);
+  if (i < 0) return { ok:false, error:'Slot not found' };
+  sheet.deleteRow(i + 1);
+  writeLog(ss, caller.id, caller.username, caller.role, 'Delete Timetable Slot', body.slotId);
+  return { ok:true };
 }
