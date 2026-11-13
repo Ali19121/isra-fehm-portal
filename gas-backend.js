@@ -118,6 +118,10 @@ function doPost(e) {
       case 'updateTimetableSlot': return respond(updateTimetableSlot(caller, body));
       case 'deleteTimetableSlot': return respond(deleteTimetableSlot(caller, body));
 
+      case 'updateCourse':        return respond(updateCourse(caller, body));
+      case 'deleteCourse':        return respond(deleteCourse(caller, body));
+      case 'submitTajweedReport': return respond(submitTajweedReport(caller, body));
+      case 'getTajweedReports':   return respond(getTajweedReports(caller, body));
       case 'getMe':               return respond(getMe(caller));
       case 'setTeacherCourses':   return respond(setTeacherCourses(caller, body));
       case 'getCourseContent':    return respond(getCourseContent(caller, body));
@@ -194,7 +198,7 @@ function setupSheets() {
       'Attendance','TotalStudents','UnderstandingLevel',
       'Observations','Issues','Suggestions',
       'SubmittedAt','Status','CoordRemarks','CoordID','ApprovedAt',
-      'BookUnit','StudentYear','Semester','UpdatedAt','TopicIDs','TopicsCovered'
+      'BookUnit','StudentYear','Semester','UpdatedAt','TopicIDs','TopicsCovered','WeekFrom','WeekTo'
     ],
     [SH.OBSERVATIONS]: [
       'ObsID','ReportID','LecturerID','Type','Description','CreatedAt'
@@ -629,18 +633,10 @@ function getCourses(body) {
     .filter(r => r[7] === 'active')
     .map(r => rowToObj(headers, r));
   if (body && body.deptId) courses = courses.filter(c => c.DeptID === body.deptId);
+  courses.forEach(c => { c.CourseType = c.CourseType || 'weekly'; c.StartDate = ymdTz(c.StartDate, ss); c.EndDate = ymdTz(c.EndDate, ss); });
   return { ok:true, courses };
 }
 
-function addCourse(caller, body) {
-  if (caller.role !== 'admin') return { ok:false, error:'Forbidden' };
-  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(SH.COURSES);
-  const cId   = 'CRS' + String(Date.now()).slice(-6);
-  sheet.appendRow([cId, body.courseName, body.courseCode||'', body.deptId||'',
-    body.totalWeeks||16, body.semester||'', body.description||'', 'active', now()]);
-  return { ok:true, courseId: cId };
-}
 
 // ============================================================
 //  WEEKLY PLAN
@@ -701,6 +697,7 @@ function getReports(caller, body) {
 
   reports.forEach(r => {
     r.LecturerName = usersMap[r.LecturerID] || r.LecturerID;
+    r.WeekFrom = ymdTz(r.WeekFrom, ss); r.WeekTo = ymdTz(r.WeekTo, ss);
     r.CourseName   = getCourseName(ss, r.CourseID);
     r.DeptName     = getDeptName(ss, r.DeptID);
   });
@@ -1019,7 +1016,7 @@ function writeLog(ss, userId, username, role, action, details) {
 // ============================================================
 // AI model fallback chain (fast first). Override with Script Property GEMINI_MODELS (comma separated).
 const AI_MODELS = ['gemini-3-flash-preview','gemini-3.1-flash-lite','gemini-flash-latest','gemini-flash-lite-latest'];
-const NEW_COLS = { REPORTS:['BookUnit','StudentYear','Semester','UpdatedAt','TopicIDs','TopicsCovered'], USERS:['LastSeen','CourseIDs'] };
+const NEW_COLS = { REPORTS:['BookUnit','StudentYear','Semester','UpdatedAt','TopicIDs','TopicsCovered','WeekFrom','WeekTo'], USERS:['LastSeen','CourseIDs'] };
 
 function ensureCols(sheet, cols) {
   const lc = Math.max(sheet.getLastColumn(), 1);
@@ -1091,6 +1088,10 @@ function submitReport(caller, body) {
     const h  = ensureCols(sh, NEW_COLS.REPORTS);
     if (!String(body.lessonsFrom || '').trim() || !String(body.lessonsTo || '').trim()) return { ok:false, error:'Please select the From and To range covered this week.' };
     if (Number(body.lessonsTo) < Number(body.lessonsFrom)) return { ok:false, error:'The "To" value cannot be before the "From" value.' };
+    if (!ymdOk(body.weekFrom) || !ymdOk(body.weekTo)) return { ok:false, error:'Week from date and week to date are required.' };
+    if (dayDiff(body.weekFrom, body.weekTo) < 0) return { ok:false, error:'Week to date cannot be before the week from date.' };
+    if (dayDiff(body.weekFrom, body.weekTo) > 7) return { ok:false, error:'A weekly report cannot span more than 7 days.' };
+    if (body.courseId && courseType(ss, body.courseId) === 'tajweed') return { ok:false, error:'Please use the Tajweed report for this course.' };
     if (!courseAllowed(ss, caller.id, body.courseId)) return { ok:false, error:'This course is not assigned to you. Please contact the administrator.' };
     const data = sh.getDataRange().getValues();
     const ix = n => h.indexOf(n);
@@ -1108,12 +1109,13 @@ function submitReport(caller, body) {
 
     const rec = {
       LecturerID:caller.id, AssignID:body.assignId||'', CourseID:body.courseId||'', DeptID:body.deptId||'',
-      WeekNum:body.weekNum, ClassDate:body.classDate||'', LessonsFrom:body.lessonsFrom||'', LessonsTo:body.lessonsTo||'',
+      WeekNum:body.weekNum, ClassDate:body.weekFrom||body.classDate||'', LessonsFrom:body.lessonsFrom||'', LessonsTo:body.lessonsTo||'',
       LessonsList:body.lessonsList||'', TajweedTopic:body.tajweedTopic||'', TajweedStatus:body.tajweedStatus||'',
       TranslationStatus:body.translationStatus||'', SurahPracticed:body.surahPracticed||'', Attendance:body.attendance||'',
       TotalStudents:body.totalStudents||'', UnderstandingLevel:body.understandingLevel||'', Observations:body.observations||'',
       Issues:body.issues||'', Suggestions:body.suggestions||'', BookUnit:body.bookUnit||'', StudentYear:body.studentYear||'',
       Semester:body.semester||'', UpdatedAt:now(), Status:'pending',
+      WeekFrom:String(body.weekFrom||''), WeekTo:String(body.weekTo||''),
       TopicIDs:String(body.topicIds||'').slice(0, 800), TopicsCovered:String(body.topicsText||'').slice(0, 1500)
     };
     let id;
@@ -1121,12 +1123,14 @@ function submitReport(caller, body) {
       id = data[row][ix('ReportID')];
       const vals = h.map((c, i) => rec[c] !== undefined ? rec[c] : (data[row][i] === undefined ? '' : data[row][i]));
       sh.getRange(row + 1, 1, 1, h.length).setValues([vals]);
+      fixWeekCells(sh, h, row + 1, rec);
       writeLog(ss, caller.id, caller.username, caller.role, 'Edit Report', `Week ${body.weekNum} report updated`);
       return { ok:true, reportId:id, updated:true, message:'Report updated' };
     }
     id = 'RPT' + String(Date.now()).slice(-8);
     rec.ReportID = id; rec.SubmittedAt = now(); rec.CoordRemarks = '';
     sh.appendRow(h.map(c => rec[c] !== undefined ? rec[c] : ''));
+    fixWeekCells(sh, h, sh.getLastRow(), rec);
     writeLog(ss, caller.id, caller.username, caller.role, 'Submit Report', `Week ${body.weekNum} report submitted`);
     return { ok:true, reportId:id, message:'Report submitted successfully' };
   } finally { lock.releaseLock(); }
@@ -1419,6 +1423,8 @@ function migrateCourses() {
     const o = { CourseID:id, CourseName:name, CourseCode:code, DeptID:'', TotalWeeks:16, Semester:'', Description:'', Status:'active', CreatedAt:now() };
     sh.appendRow(h.map(c => o[c] !== undefined ? o[c] : ''));
   });
+  const h2 = ensureCols(sh, COURSE_NEW_COLS), ti = h2.indexOf('CourseType');
+  sh.getDataRange().getValues().forEach((r, i) => { if (i > 0 && !r[ti]) sh.getRange(i + 1, ti + 1).setValue(r[0] === 'CRS004' ? 'tajweed' : 'weekly'); });
   console.log('✅ Courses ready.');
 }
 
@@ -1621,4 +1627,148 @@ function seedCourseContent() {
     return h.map(c => m[c] !== undefined ? m[c] : (o[c] !== undefined ? o[c] : ''));
   }));
   console.log('✅ Course content added: ' + rows.length + ' rows.');
+}
+
+// ============================================================
+//  V3.4 — week dates, course types (weekly / Tajweed), Tajweed reports
+// ============================================================
+const COURSE_NEW_COLS = ['CourseType','Duration','StartDate','EndDate'];
+function ymdOk(s) { return /^\d{4}-\d{2}-\d{2}$/.test(String(s || '')) && !isNaN(new Date(s + 'T00:00:00Z')); }
+function dayDiff(a, b) { return Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / 86400000); }
+function fixWeekCells(sh, h, rowNo, rec) {   // keep the week dates as plain text
+  ['WeekFrom', 'WeekTo'].forEach(c => { const i = h.indexOf(c); if (i >= 0) sh.getRange(rowNo, i + 1).setNumberFormat('@').setValue(rec[c] || ''); });
+}
+function courseType(ss, id) {
+  const d = ss.getSheetByName(SH.COURSES).getDataRange().getValues(), ti = d[0].indexOf('CourseType');
+  const r = d.slice(1).find(x => x[0] === id);
+  return r && ti >= 0 && r[ti] ? r[ti] : 'weekly';
+}
+function courseRules(type, b, rec) {
+  if (type === 'tajweed') {
+    const dur = String(b.duration || '').trim().slice(0, 60);
+    if (!dur) return 'Course duration is required for a Tajweed course.';
+    if (!ymdOk(b.startDate) || !ymdOk(b.endDate)) return 'From date and To date are required for a Tajweed course.';
+    if (dayDiff(b.startDate, b.endDate) < 0) return 'To date cannot be before the From date.';
+    Object.assign(rec, { Duration:dur, StartDate:b.startDate, EndDate:b.endDate });
+  } else {
+    const wk = parseInt(b.totalWeeks, 10) || 16;
+    if (wk < 1 || wk > 52) return 'Total weeks must be between 1 and 52.';
+    Object.assign(rec, { TotalWeeks:wk, Semester:String(b.semester || '').slice(0, 40) });
+  }
+  return null;
+}
+function courseDateCells(sh, h, rowNo, o) {
+  ['StartDate', 'EndDate'].forEach(c => sh.getRange(rowNo, h.indexOf(c) + 1).setNumberFormat('@').setValue(o[c] || ''));
+}
+function addCourse(caller, body) {
+  if (caller.role !== 'admin') return { ok:false, error:'Forbidden' };
+  const name = String(body.courseName || '').trim().slice(0, 120);
+  if (!name) return { ok:false, error:'Course name is required.' };
+  const type = body.courseType === 'tajweed' ? 'tajweed' : 'weekly';
+  const rec = { CourseName:name, CourseCode:String(body.courseCode || '').trim().slice(0, 20), Description:String(body.description || '').slice(0, 500), CourseType:type };
+  const err = courseRules(type, body, rec); if (err) return { ok:false, error:err };
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sh = ss.getSheetByName(SH.COURSES), h = ensureCols(sh, COURSE_NEW_COLS), d = sh.getDataRange().getValues();
+    if (d.slice(1).some(r => String(r[h.indexOf('CourseName')]).trim().toLowerCase() === name.toLowerCase() && r[h.indexOf('Status')] === 'active'))
+      return { ok:false, error:'A course with this name already exists.' };
+    const id = 'CRS' + String(Date.now()).slice(-6);
+    const o = Object.assign({ CourseID:id, DeptID:'', Status:'active', CreatedAt:now() }, rec);
+    sh.appendRow(h.map(c => o[c] !== undefined ? o[c] : ''));
+    courseDateCells(sh, h, sh.getLastRow(), o);
+    writeLog(ss, caller.id, caller.username, caller.role, 'Add Course', name + ' (' + type + ')');
+    return { ok:true, courseId:id };
+  } finally { lock.releaseLock(); }
+}
+function updateCourse(caller, body) {
+  if (caller.role !== 'admin') return { ok:false, error:'Forbidden' };
+  const name = String(body.courseName || '').trim().slice(0, 120);
+  if (!name) return { ok:false, error:'Course name is required.' };
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sh = ss.getSheetByName(SH.COURSES), h = ensureCols(sh, COURSE_NEW_COLS), d = sh.getDataRange().getValues();
+    const i = d.findIndex((r, k) => k > 0 && r[h.indexOf('CourseID')] === body.courseId);
+    if (i < 0) return { ok:false, error:'Course not found.' };
+    const type = d[i][h.indexOf('CourseType')] || 'weekly';
+    const rec = { CourseName:name, CourseCode:String(body.courseCode || '').trim().slice(0, 20), Description:String(body.description || '').slice(0, 500) };
+    const err = courseRules(type, body, rec); if (err) return { ok:false, error:err };
+    if (d.some((r, k) => k > 0 && k !== i && String(r[h.indexOf('CourseName')]).trim().toLowerCase() === name.toLowerCase() && r[h.indexOf('Status')] === 'active'))
+      return { ok:false, error:'A course with this name already exists.' };
+    const o = Object.assign(rowToObj(h, d[i]), rec);
+    sh.getRange(i + 1, 1, 1, h.length).setValues([h.map(c => o[c] !== undefined ? o[c] : '')]);
+    courseDateCells(sh, h, i + 1, o);
+    writeLog(ss, caller.id, caller.username, caller.role, 'Edit Course', name);
+    return { ok:true };
+  } finally { lock.releaseLock(); }
+}
+// Soft delete: the course is hidden from lists; existing reports keep their course name
+function deleteCourse(caller, body) {
+  if (caller.role !== 'admin') return { ok:false, error:'Forbidden' };
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sh = ss.getSheetByName(SH.COURSES), d = sh.getDataRange().getValues(), h = d[0];
+  const i = d.findIndex((r, k) => k > 0 && r[h.indexOf('CourseID')] === body.courseId);
+  if (i < 0) return { ok:false, error:'Course not found.' };
+  sh.getRange(i + 1, h.indexOf('Status') + 1).setValue('inactive');
+  writeLog(ss, caller.id, caller.username, caller.role, 'Delete Course', d[i][h.indexOf('CourseName')]);
+  return { ok:true };
+}
+
+// ── Tajweed course reports (new sheet "TajweedReports"; no weeks) ──
+const TJ_HEADERS = ['TReportID','LecturerID','LecturerName','CourseID','CourseName','Duration','FromDate','ToDate',
+  'TotalStrength','Present','Absent','GenderType','SubmittedAt','UpdatedAt'];
+function tjSheet(ss) {
+  let sh = ss.getSheetByName('TajweedReports');
+  if (!sh) {
+    sh = ss.insertSheet('TajweedReports'); sh.appendRow(TJ_HEADERS);
+    sh.getRange(1, 1, 1, TJ_HEADERS.length).setFontWeight('bold').setBackground('#1a2744').setFontColor('#ffffff'); sh.setFrozenRows(1);
+  }
+  return sh;
+}
+function tjRow(h, r, ss) {
+  const o = rowToObj(h, r);
+  o.FromDate = ymdTz(o.FromDate, ss); o.ToDate = ymdTz(o.ToDate, ss);
+  ['TotalStrength', 'Present', 'Absent'].forEach(k => o[k] = Number(o[k]) || 0);
+  return o;
+}
+function submitTajweedReport(caller, body) {
+  if (caller.role !== 'teacher') return { ok:false, error:'Only lecturers can submit this report.' };
+  const total = parseInt(body.totalStrength, 10), present = parseInt(body.present, 10), gender = String(body.gender || '');
+  if (!(total >= 1 && total <= 5000)) return { ok:false, error:'Total strength must be a number between 1 and 5000.' };
+  if (!(present >= 0 && present <= total)) return { ok:false, error:'Present students must be between 0 and the total strength.' };
+  if (!['Male', 'Female', 'Both'].includes(gender)) return { ok:false, error:'Please select Male, Female or Both.' };
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const cd = ss.getSheetByName(SH.COURSES).getDataRange().getValues(), ch = cd[0];
+    const cr = cd.slice(1).find(r => r[ch.indexOf('CourseID')] === body.courseId && r[ch.indexOf('Status')] === 'active');
+    if (!cr || (cr[ch.indexOf('CourseType')] || 'weekly') !== 'tajweed') return { ok:false, error:'Please select a Tajweed course.' };
+    if (!courseAllowed(ss, caller.id, body.courseId)) return { ok:false, error:'This course is not assigned to you. Please contact the administrator.' };
+    const sh = tjSheet(ss), data = sh.getDataRange().getValues(), h = data[0];
+    const rec = { LecturerID:caller.id, LecturerName:userFullName(ss, caller.id), CourseID:body.courseId, CourseName:cr[ch.indexOf('CourseName')],
+      Duration:cr[ch.indexOf('Duration')] || '', FromDate:ymdTz(cr[ch.indexOf('StartDate')], ss), ToDate:ymdTz(cr[ch.indexOf('EndDate')], ss),
+      TotalStrength:total, Present:present, Absent:total - present, GenderType:gender, UpdatedAt:now() };
+    const i = data.findIndex((r, k) => k > 0 && r[h.indexOf('LecturerID')] === caller.id && r[h.indexOf('CourseID')] === body.courseId);
+    let rowNo;
+    if (i > 0) { const o = Object.assign(rowToObj(h, data[i]), rec); sh.getRange(i + 1, 1, 1, h.length).setValues([h.map(c => o[c] !== undefined ? o[c] : '')]); rowNo = i + 1; }
+    else { rec.TReportID = 'TJ' + String(Date.now()).slice(-8); rec.SubmittedAt = now(); sh.appendRow(h.map(c => rec[c] !== undefined ? rec[c] : '')); rowNo = sh.getLastRow(); }
+    ['FromDate', 'ToDate'].forEach(c => sh.getRange(rowNo, h.indexOf(c) + 1).setNumberFormat('@').setValue(rec[c] || ''));
+    writeLog(ss, caller.id, caller.username, caller.role, i > 0 ? 'Update Tajweed Report' : 'Submit Tajweed Report', rec.CourseName + ': ' + present + '/' + total);
+    return { ok:true, updated:i > 0 };
+  } finally { lock.releaseLock(); }
+}
+function getTajweedReports(caller, body) {
+  if (!['admin', 'coordinator', 'teacher'].includes(caller.role)) return { ok:false, error:'Forbidden' };
+  body = body || {};
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sh = tjSheet(ss), d = sh.getDataRange().getValues(), h = d[0];
+  let rows = d.slice(1).map(r => tjRow(h, r, ss)).filter(o => o.TReportID);
+  if (caller.role === 'teacher') rows = rows.filter(o => o.LecturerID === caller.id);
+  if (caller.role === 'coordinator') {
+    const u = ss.getSheetByName(SH.USERS).getDataRange().getValues(), uh = u[0];
+    const mine = u.slice(1).filter(r => r[uh.indexOf('CoordinatorID')] === caller.id).map(r => r[uh.indexOf('UserID')]);
+    rows = rows.filter(o => mine.includes(o.LecturerID));
+  }
+  if (body.courseId)   rows = rows.filter(o => o.CourseID   === body.courseId);
+  if (body.lecturerId) rows = rows.filter(o => o.LecturerID === body.lecturerId);
+  if (body.gender)     rows = rows.filter(o => o.GenderType === body.gender);
+  rows.sort((a, b) => String(b.UpdatedAt).localeCompare(String(a.UpdatedAt)));
+  return { ok:true, reports:rows };
 }
