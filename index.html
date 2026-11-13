@@ -603,6 +603,7 @@ tbody tr{transition:background .12s}
       </div>
       <div class="sb-sec"><div class="sb-sec-lbl">Monitoring</div>
         <div class="ni" data-panel="admin-reports"><span class="ni-icon">📄</span>All Reports<span class="ni-badge" id="badge-pend">0</span></div>
+        <div class="ni" data-panel="admin-tajweed"><span class="ni-icon">📿</span>Tajweed Reports</div>
         <div class="ni" data-panel="admin-compare"><span class="ni-icon">📈</span>Plan vs Actual</div>
         <div class="ni" data-panel="admin-schedule"><span class="ni-icon">📅</span>Course Schedule</div>
         <div class="ni" data-panel="admin-timetable"><span class="ni-icon">🕐</span>Timetable</div>
@@ -620,6 +621,7 @@ tbody tr{transition:background .12s}
         <div class="ni active" data-panel="coord-dash"><span class="ni-icon">📊</span>Dashboard</div>
         <div class="ni" data-panel="coord-teachers"><span class="ni-icon">👥</span>My Lecturers</div>
         <div class="ni" data-panel="coord-reports"><span class="ni-icon">📄</span>Review Reports</div>
+        <div class="ni" data-panel="coord-tajweed"><span class="ni-icon">📿</span>Tajweed Reports</div>
         <div class="ni" data-panel="coord-timetable"><span class="ni-icon">🕐</span>Timetable</div>
         <div class="ni" data-panel="coord-summary"><span class="ni-icon">📋</span>Weekly Summary</div>
       </div>
@@ -633,6 +635,7 @@ tbody tr{transition:background .12s}
         <div class="ni" data-panel="t-schedule"><span class="ni-icon">📅</span>Course Schedule</div>
         <div class="ni" data-panel="t-timetable"><span class="ni-icon">🕐</span>My Timetable</div>
         <div class="ni" data-panel="t-classlog"><span class="ni-icon">⏱️</span>Class Log</div>
+        <div class="ni" data-panel="t-tajweed" id="nav-tajweed" style="display:none"><span class="ni-icon">📿</span>Tajweed Report</div>
       </div>
     </div>
 
@@ -753,10 +756,10 @@ tbody tr{transition:background .12s}
       <div id="panel-admin-courses" class="panel">
         <div class="sec-hd">
           <div><div class="sec-title">Courses</div></div>
-          <button class="btn btn-navy" onclick="openModal('mcourse')">+ Add Course</button>
+          <button class="btn btn-navy" onclick="openCourseModal()">+ Add Course</button>
         </div>
         <div class="card"><div class="tw"><table>
-          <thead><tr><th>Code</th><th>Course Name</th><th>Available in</th><th>Units / Content</th><th>Weeks</th><th>Semester</th><th>Status</th></tr></thead>
+          <thead><tr><th>Code</th><th>Course Name</th><th>Type</th><th>Duration / Dates</th><th>Units / Content</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody id="course-tbl"><tr><td colspan="7"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
         </table></div></div>
       </div>
@@ -1022,9 +1025,10 @@ tbody tr{transition:background .12s}
               <div class="card-bd">
                 <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Click a week to select:</p>
                 <div class="wk-cal" id="wk-cal-grid"></div>
-                <div class="fg-grid c2" style="margin-top:14px">
+                <div class="fg-grid c3" style="margin-top:14px">
                   <div class="fg"><label>Week No.</label><input type="number" id="rpt-wk" min="1" max="16" readonly style="background:var(--bg)"></div>
-                  <div class="fg"><label>Class Date</label><input type="date" id="rpt-date"></div>
+                  <div class="fg"><label>Week from date *</label><input type="date" id="rpt-wfrom" onchange="onWeekFrom()"></div>
+                  <div class="fg"><label>Week to date *</label><input type="date" id="rpt-wto"></div>
                 </div>
                 <div class="fg-grid c2" style="margin-top:12px">
                   <div class="fg">
@@ -1186,6 +1190,66 @@ tbody tr{transition:background .12s}
         </div>
       </div>
 
+      <div id="panel-t-tajweed" class="panel">
+        <div class="sec-hd"><div><div class="sec-title">Tajweed Course Report</div><div class="sec-sub">Report for the Tajweed courses assigned to you</div></div></div>
+        <div class="cl-grid">
+          <div class="card">
+            <div class="card-hd"><div class="card-title" id="tj-form-title">Course report</div></div>
+            <div class="card-bd">
+              <div class="fg-grid">
+                <div class="fg"><label>Tajweed course *</label><select id="tj-course" onchange="onTjCourse()"><option value="">Select course</option></select></div>
+                <div class="fg"><label>Course duration</label><input type="text" id="tj-dur" readonly style="background:var(--bg)"></div>
+                <div class="fg-grid c2">
+                  <div class="fg"><label>From date</label><input type="text" id="tj-from" readonly style="background:var(--bg)"></div>
+                  <div class="fg"><label>To date</label><input type="text" id="tj-to" readonly style="background:var(--bg)"></div>
+                </div>
+                <div class="fg-grid c2">
+                  <div class="fg"><label>Total strength *</label><input type="number" id="tj-total" min="1" oninput="calcAbsent()"></div>
+                  <div class="fg"><label>Total present *</label><input type="number" id="tj-present" min="0" oninput="calcAbsent()"></div>
+                </div>
+                <div class="fg"><label>Absent</label><input type="number" id="tj-absent" readonly style="background:var(--bg)"></div>
+                <div class="fg"><label>Type *</label><select id="tj-gender"><option value="">Select</option><option>Male</option><option>Female</option><option>Both</option></select></div>
+              </div>
+              <button class="btn btn-gold" id="tj-save" style="width:100%;justify-content:center;margin-top:14px" onclick="saveTajweed()">Submit Report</button>
+            </div>
+          </div>
+          <div>
+            <div class="card"><div class="card-hd"><div class="card-title">My Tajweed reports</div></div><div class="tw"><table>
+              <thead><tr><th>Course</th><th>Duration</th><th>From – To</th><th>Total</th><th>Present</th><th>Absent</th><th>Type</th><th>Actions</th></tr></thead>
+              <tbody id="tj-my-tbl"><tr><td colspan="8"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
+            </table></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="panel-admin-tajweed" class="panel">
+        <div class="sec-hd"><div><div class="sec-title">Tajweed Course Reports</div><div class="sec-sub">Strength and attendance reported by the assigned lecturers</div></div><div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn btn-out btn-sm" onclick="printTjReports()">🖨️ Print</button><button class="btn btn-out btn-sm" onclick="exportCSV('tj-admin-tbl','tajweed-reports.csv')">📥 Export CSV</button></div></div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+          <select class="fi" style="width:210px;padding:6px 10px" id="tj-admin-course" onchange="loadTjReports('admin')"><option value="">All Tajweed courses</option></select>
+          <select class="fi" style="width:190px;padding:6px 10px" id="tj-admin-lec" onchange="loadTjReports('admin')"><option value="">All lecturers</option></select>
+          <select class="fi" style="width:140px;padding:6px 10px" id="tj-admin-gender" onchange="loadTjReports('admin')"><option value="">All types</option><option>Male</option><option>Female</option><option>Both</option></select>
+        </div>
+        <div class="stats-row" id="tj-admin-stats"></div>
+        <div class="card"><div class="tw"><table>
+          <thead><tr><th>Lecturer</th><th>Course</th><th>Duration</th><th>From – To</th><th>Total strength</th><th>Present</th><th>Absent</th><th>Type</th><th>Updated</th></tr></thead>
+          <tbody id="tj-admin-tbl"><tr><td colspan="9"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
+        </table></div></div>
+      </div>
+
+      <div id="panel-coord-tajweed" class="panel">
+        <div class="sec-hd"><div><div class="sec-title">Tajweed Course Reports</div><div class="sec-sub">Strength and attendance reported by the assigned lecturers</div></div></div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+          <select class="fi" style="width:210px;padding:6px 10px" id="tj-coord-course" onchange="loadTjReports('coord')"><option value="">All Tajweed courses</option></select>
+          
+          <select class="fi" style="width:140px;padding:6px 10px" id="tj-coord-gender" onchange="loadTjReports('coord')"><option value="">All types</option><option>Male</option><option>Female</option><option>Both</option></select>
+        </div>
+        <div class="stats-row" id="tj-coord-stats"></div>
+        <div class="card"><div class="tw"><table>
+          <thead><tr><th>Lecturer</th><th>Course</th><th>Duration</th><th>From – To</th><th>Total strength</th><th>Present</th><th>Absent</th><th>Type</th><th>Updated</th></tr></thead>
+          <tbody id="tj-coord-tbl"><tr><td colspan="9"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
+        </table></div></div>
+      </div>
+
       <div id="panel-t-history" class="panel">
         <div class="sec-hd"><div class="sec-title">My Report History</div><button class="btn btn-out btn-sm" onclick="exportCSV('t-hist-tbl','my-reports.csv')">📥 Export</button></div>
         <div class="card"><div class="tw"><table>
@@ -1274,18 +1338,22 @@ tbody tr{transition:background .12s}
 <!-- ══ MODAL: ADD COURSE ══ -->
 <div class="modal-ov" id="mcourse" style="display:none" onclick="closeOv(event,'mcourse')">
  <div class="modal">
-  <div class="modal-hd"><h3>Add Course</h3><button class="modal-x" onclick="closeModal('mcourse')">✕</button></div>
+  <div class="modal-hd"><h3 id="mcourse-title">Add Course</h3><button class="modal-x" onclick="closeModal('mcourse')">✕</button></div>
   <div class="modal-bd">
    <div class="fg-grid c2">
-    <div class="fg"><label>Course Name *</label><input type="text" id="c-name" placeholder="e.g. Fehm-e-Quran Course 1"></div>
-    <div class="fg"><label>Code</label><input type="text" id="c-code" placeholder="e.g. FEQ-1"></div>
-    <div class="fg"><label>Department</label><select id="c-dept"><option value="">All departments</option></select></div>
-    <div class="fg"><label>Total Weeks</label><input type="number" id="c-weeks" value="16"></div>
-    <div class="fg"><label>Semester</label><input type="text" id="c-sem" placeholder="Semester 1"></div>
+    <div class="fg"><label>Course name *</label><input type="text" id="c-name" placeholder="e.g. Tajweed Course – Batch 12"></div>
+    <div class="fg"><label>Code</label><input type="text" id="c-code" placeholder="e.g. TJW-12"></div>
+    <div class="fg" style="grid-column:1/-1"><label>Course type *</label><select id="c-type" onchange="onCourseType()"><option value="weekly">Weekly course (week-wise report)</option><option value="tajweed">Tajweed course (strength and attendance report)</option></select></div>
+    <div class="fg" id="c-weeks-w"><label>Total weeks</label><input type="number" id="c-weeks" min="1" max="52" value="16"></div>
+    <div class="fg" id="c-sem-w"><label>Semester</label><input type="text" id="c-sem" placeholder="Semester 1"></div>
+    <div class="fg" id="c-dur-w" style="display:none;grid-column:1/-1"><label>Course duration *</label><input type="text" id="c-dur" placeholder="e.g. 3 months"></div>
+    <div class="fg" id="c-from-w" style="display:none"><label>From date *</label><input type="date" id="c-from"></div>
+    <div class="fg" id="c-to-w" style="display:none"><label>To date *</label><input type="date" id="c-to"></div>
     <div class="fg" style="grid-column:1/-1"><label>Description</label><textarea id="c-desc" style="min-height:60px" placeholder="Brief description…"></textarea></div>
    </div>
+   <input type="hidden" id="c-id">
   </div>
-  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal('mcourse')">Cancel</button><button class="btn btn-navy" onclick="saveCourse()">Add Course</button></div>
+  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal('mcourse')">Cancel</button><button class="btn btn-navy" id="c-save" onclick="saveCourse()">Add Course</button></div>
  </div>
 </div>
 
@@ -1762,6 +1830,7 @@ function bootApp() {
   startSync();
   // Load global data then show default panel
   Promise.all([refreshMe(), loadDepts(), loadCourses(), loadUnits(), loadContent()]).then(() => {
+    updateTeacherNav();
     const defaults={admin:'admin-dash',coordinator:'coord-dash',teacher:'t-dash'};
     showPanel(defaults[u.role]||'admin-dash');
   });
@@ -1773,7 +1842,7 @@ function bootApp() {
 const PANEL_TITLES = {
   'admin-dash':'Dashboard','admin-depts':'Departments','admin-users':'Manage Users',
   'admin-courses':'Courses','admin-reports':'All Reports','admin-schedule':'Course Schedule',
-  'admin-timetable':'Timetable','admin-compare':'Plan vs Actual','admin-hours':'Teaching Hours','t-classlog':'Class Log','admin-ai':'AI Assistant','admin-logs':'Activity Logs','admin-settings':'Settings',
+  'admin-timetable':'Timetable','admin-compare':'Plan vs Actual','admin-hours':'Teaching Hours','t-classlog':'Class Log','admin-tajweed':'Tajweed Reports','coord-tajweed':'Tajweed Reports','t-tajweed':'Tajweed Course Report','admin-ai':'AI Assistant','admin-logs':'Activity Logs','admin-settings':'Settings',
   'coord-dash':'Dashboard','coord-teachers':'My Lecturers','coord-reports':'Review Reports',
   'coord-timetable':'Timetable','coord-summary':'Weekly Summary',
   't-dash':'My Dashboard','t-submit':'Submit Report','t-history':'My Reports',
@@ -1789,6 +1858,9 @@ const PANEL_LOADERS = {
   'admin-timetable': loadAdminTT,
   'admin-compare':   loadCompare,
   'admin-hours':     loadHours,
+  'admin-tajweed':   ()=>loadTjReports('admin'),
+  'coord-tajweed':   ()=>loadTjReports('coord'),
+  't-tajweed':       loadTajweedForm,
   't-classlog':      loadClassLog,
   'admin-ai':        ()=>{},
   'admin-logs':      loadLogs,
@@ -2076,21 +2148,15 @@ async function uploadCsv(){
 async function loadCourses2(){
   await Promise.all([loadUnits(),loadContent()]);
   const r=await api({action:'getCourses'}); if(!r.ok)return; COURSES=r.courses;
-  document.getElementById('course-tbl').innerHTML=COURSES.length?COURSES.map(c=>`<tr>
+  document.getElementById('course-tbl').innerHTML=COURSES.length?COURSES.map(c=>{const tj=isTajweed(c);return `<tr>
     <td style="font-family:monospace;font-size:12px">${esc(c.CourseCode||'—')}</td>
     <td><strong>${esc(c.CourseName)}</strong></td>
-    <td style="font-size:12px">All departments</td>
-    <td><button class="btn btn-out btn-xs" onclick="openUnits('${esc(c.CourseID)}')">📑 Units (${(UNITS[c.CourseID]||[]).length})</button> <button class="btn btn-out btn-xs" onclick="openContent('${esc(c.CourseID)}')">📚 Content (${(CONTENT[c.CourseID]||[]).length})</button></td>
-    <td>${esc(c.TotalWeeks)} wks</td><td style="font-size:12px">${esc(c.Semester||'—')}</td>
+    <td><span class="b ${tj?'b-t':'b-b'}">${tj?'Tajweed':'Weekly'}</span></td>
+    <td style="font-size:12px">${tj?esc(c.Duration||'—')+'<div style="color:var(--muted)">'+fmtD(c.StartDate)+' – '+fmtD(c.EndDate)+'</div>':esc(c.TotalWeeks)+' weeks'}</td>
+    <td>${tj?'—':`<button class="btn btn-out btn-xs" onclick="openUnits('${esc(c.CourseID)}')">📑 Units (${(UNITS[c.CourseID]||[]).length})</button> <button class="btn btn-out btn-xs" onclick="openContent('${esc(c.CourseID)}')">📚 Content (${(CONTENT[c.CourseID]||[]).length})</button>`}</td>
     <td><span class="b ${c.Status==='active'?'b-g':'b-n'}">${esc(c.Status)}</span></td>
-  </tr>`).join(''):'<tr><td colspan="7"><div class="empty"><div class="ei">📚</div><h3>No courses</h3></div></td></tr>';
-}
-async function saveCourse(){
-  const n=document.getElementById('c-name').value.trim(),d=document.getElementById('c-dept').value;
-  if(!n){toast('Course name is required','warn');return;}
-  const r=await api({action:'addCourse',courseName:n,courseCode:document.getElementById('c-code').value,deptId:d,totalWeeks:document.getElementById('c-weeks').value,semester:document.getElementById('c-sem').value,description:document.getElementById('c-desc').value});
-  if(r.ok){closeModal('mcourse');toast('Course added!','ok');loadCourses2();loadCourses();}
-  else toast(r.error,'err');
+    <td style="display:flex;gap:4px"><button class="btn btn-out btn-xs" onclick="openCourseModal('${esc(c.CourseID)}')">Edit</button><button class="btn btn-del btn-xs" onclick="delCourse('${esc(c.CourseID)}')">Delete</button></td>
+  </tr>`;}).join(''):'<tr><td colspan="7"><div class="empty"><div class="ei">📚</div><h3>No courses</h3></div></td></tr>';
 }
 
 // ════════════════════════════════════════════════════════════
@@ -2114,7 +2180,7 @@ async function loadReports(){
     return `<tr>
     <td><strong>${esc(rp.LecturerName||'—')}</strong><div style="font-size:11px;color:var(--muted)">${esc(rp.DeptName||'—')}</div></td>
     <td><span class="b b-gold" style="font-size:10.5px">${esc(rp.CourseName||'—')}</span><div style="font-size:11px;color:var(--muted);margin-top:3px">${esc(unitLabel(rp.CourseID,rp.BookUnit))}</div></td>
-    <td><strong>Week ${esc(rp.WeekNum)}</strong><div style="font-size:11px;color:var(--muted)">${fmtD(rp.ClassDate)}</div></td>
+    <td><strong>Week ${esc(rp.WeekNum)}</strong><div style="font-size:11px;color:var(--muted)">${weekRange(rp)}</div></td>
     <td style="font-size:12px">${esc(rangeShort(rp))}</td>
     <td style="font-size:12px">${esc(rp.StudentYear||'—')}<div style="color:var(--muted)">${esc(rp.Semester||'')}</div></td>
     <td style="font-size:12px">${a||'—'}/${t||'—'}${pc===null?'':`<div style="color:${pc<60?'var(--red)':'var(--muted)'}">${pc}%</div>`}</td>
@@ -2258,7 +2324,7 @@ async function loadCoordReports(){
   const sm={pending:'b-y',approved:'b-g',rejected:'b-r'};
   document.getElementById('coord-rpt-tbl').innerHTML=(r.reports||[]).length?r.reports.map(rp=>`<tr>
     <td><strong>${rp.LecturerName||'—'}</strong></td><td><strong>Wk ${rp.WeekNum}</strong></td>
-    <td style="font-size:12px">${fmtD(rp.ClassDate)}</td>
+    <td style="font-size:12px">${weekRange(rp)}</td>
     <td style="font-family:monospace;font-size:12px">${rangeShort(rp)}</td>
     <td style="font-size:12px">${rp.Attendance||'—'}/${rp.TotalStudents||'—'}</td>
     <td><span class="b ${sm[rp.Status]||'b-n'}">${rp.Status}</span></td>
@@ -2341,7 +2407,7 @@ async function initSubmitForm(){
   document.getElementById('sub-sub').textContent=(u.courseName||'Course')+' · '+(u.section||'—');
   document.getElementById('prev-name').textContent=u.name;
   document.getElementById('prev-course').textContent=u.courseName||'—';
-  document.getElementById('rpt-date').valueAsDate=new Date();
+  document.getElementById('rpt-wfrom').value='';document.getElementById('rpt-wto').value='';
   // Populate department dropdown
   const dSel=document.getElementById('rpt-dept');
   if(dSel){
@@ -2422,10 +2488,10 @@ function onRptDeptChange(){
   const cSel=document.getElementById('rpt-course');
   if(!cSel)return;
   while(cSel.options.length>1)cSel.remove(1);
-  myCourses().forEach(c=>cSel.add(new Option(c.CourseName,c.CourseID)));
+  weeklyCourses().forEach(c=>cSel.add(new Option(c.CourseName,c.CourseID)));
   // Pre-select teacher's course
   if(SESSION?.user?.courseId) cSel.value=SESSION.user.courseId;
-  if(!cSel.value&&myCourses().length===1)cSel.value=myCourses()[0].CourseID;
+  if(!cSel.value&&weeklyCourses().length===1)cSel.value=weeklyCourses()[0].CourseID;
 }
 
 async function submitReport(){
@@ -2435,13 +2501,18 @@ async function submitReport(){
   const vf=RPT_FROM(),vt=RPT_TO();
   if(!vf||!vt){toast(rptMode()==='topics'?'Please select the From and To topics':'Please select the From and To lessons','warn');return;}
   if(+vt<+vf){toast('The "To" value cannot be before the "From" value','warn');return;}
+  {const a=document.getElementById('rpt-wfrom').value,b=document.getElementById('rpt-wto').value;
+   if(!a||!b){toast('Week from date and week to date are required','warn');return;}
+   const dd=Math.round((new Date(b+'T00:00:00Z')-new Date(a+'T00:00:00Z'))/86400000);
+   if(dd<0){toast('Week to date cannot be before the week from date','warn');return;}
+   if(dd>7){toast('A weekly report cannot span more than 7 days','warn');return;}}
   const sel=[...document.querySelectorAll('.lp-btn.lp-sel')].map(x=>x.dataset.l).join(',');
   const u=SESSION.user;
   const btn=document.getElementById('sub-btn');
   btn.innerHTML='<div class="spin"></div> Submitting…';btn.disabled=true;
   const selDeptId   = document.getElementById('rpt-dept')?.value  || u.deptId   || '';
   const selCourseId = document.getElementById('rpt-course')?.value || u.courseId || 'CRS001';
-  const r=await api({action:'submitReport',courseId:selCourseId,deptId:selDeptId,weekNum:parseInt(wk),classDate:document.getElementById('rpt-date').value,lessonsFrom:RPT_FROM(),lessonsTo:RPT_TO(),lessonsList:sel,tajweedTopic:document.getElementById('rpt-taj-topic').value,tajweedStatus:document.getElementById('rpt-taj-status').value,translationStatus:document.getElementById('rpt-trans').value,surahPracticed:document.getElementById('rpt-surah').value,attendance:document.getElementById('rpt-att').value,totalStudents:document.getElementById('rpt-tot').value,understandingLevel:document.getElementById('rpt-und').value,observations:document.getElementById('rpt-obs').value,issues:document.getElementById('rpt-issues').value,suggestions:document.getElementById('rpt-sug').value,bookUnit:(rptMode()==='topics'?'':'Unit '+document.getElementById('rpt-unit').value),studentYear:document.getElementById('rpt-year').value,semester:document.getElementById('rpt-sem').value,reportId:EDIT_ID,topicIds:[...TOPIC_SEL].join(','),topicsText:topicsText()});
+  const r=await api({action:'submitReport',courseId:selCourseId,deptId:selDeptId,weekNum:parseInt(wk),classDate:document.getElementById('rpt-wfrom').value,weekFrom:document.getElementById('rpt-wfrom').value,weekTo:document.getElementById('rpt-wto').value,lessonsFrom:RPT_FROM(),lessonsTo:RPT_TO(),lessonsList:sel,tajweedTopic:document.getElementById('rpt-taj-topic').value,tajweedStatus:document.getElementById('rpt-taj-status').value,translationStatus:document.getElementById('rpt-trans').value,surahPracticed:document.getElementById('rpt-surah').value,attendance:document.getElementById('rpt-att').value,totalStudents:document.getElementById('rpt-tot').value,understandingLevel:document.getElementById('rpt-und').value,observations:document.getElementById('rpt-obs').value,issues:document.getElementById('rpt-issues').value,suggestions:document.getElementById('rpt-sug').value,bookUnit:(rptMode()==='topics'?'':'Unit '+document.getElementById('rpt-unit').value),studentYear:document.getElementById('rpt-year').value,semester:document.getElementById('rpt-sem').value,reportId:EDIT_ID,topicIds:[...TOPIC_SEL].join(','),topicsText:topicsText()});
   btn.innerHTML='✅ Submit Report';btn.disabled=false;
   if(r.ok){toast(EDIT_ID?'Report updated!':'Report submitted!','ok');EDIT_ID='';btn.innerHTML='✅ Submit Report';showPanel('t-history');}
   else toast(r.error||'Submit failed','err');
@@ -2455,7 +2526,7 @@ async function loadMyHistory(){
   MYRPT=r.reports||[];
   const sm={approved:'b-g',pending:'b-y',rejected:'b-r'};
   document.getElementById('t-hist-tbl').innerHTML=(r.reports||[]).sort((a,b)=>b.WeekNum-a.WeekNum).length?(r.reports).map(rp=>`<tr>
-    <td><strong>Wk ${rp.WeekNum}</strong></td><td style="font-size:12px">${fmtD(rp.ClassDate)}</td>
+    <td><strong>Wk ${rp.WeekNum}</strong></td><td style="font-size:12px">${weekRange(rp)}</td>
     <td style="font-size:12px">${esc(unitLabel(rp.CourseID,rp.BookUnit))}</td>
     <td style="font-family:monospace;font-size:12px">${rangeShort(rp)}</td>
     <td style="font-size:12px">${rp.TajweedStatus||'—'}</td>
@@ -2895,7 +2966,7 @@ window.bootApp=function(){localStorage.setItem('session',JSON.stringify(SESSION)
 // ════════════════════════════════════════════════════════════
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let RC={},INF={},LASTVER=null,SYNCT=null,CUR='',EDIT_ID='',EDIT_PENDING=null,MYRPT=[],AIH=[],AIR=[];
-const RO=new Set(['getDepartments','getCourses','getUsers','getReports','getDashboardStats','getTimetable','getWeeklyPlan','getLogs','getComparison','getClassLogs','getCourseContent']);
+const RO=new Set(['getDepartments','getCourses','getUsers','getReports','getDashboardStats','getTimetable','getWeeklyPlan','getLogs','getComparison','getClassLogs','getCourseContent','getTajweedReports']);
 async function api(p){
   if(!RO.has(p.action)){const r=await apiRaw(p);RC={};return r;}
   const k=JSON.stringify(p),h=RC[k];
@@ -2951,7 +3022,7 @@ function applyEdit(rp){
   const ls=String(rp.LessonsList||'').split(',').filter(Boolean).map(Number);
   document.querySelectorAll('.lp-btn').forEach(b=>b.classList.toggle('lp-sel',ls.includes(+b.dataset.l)));
   set('rpt-from',rp.LessonsFrom);set('rpt-to',rp.LessonsTo);set('rpt-cnt',ls.length||'');
-  set('rpt-date',toYMD(rp.ClassDate));set('rpt-year',rp.StudentYear);set('rpt-sem',rp.Semester);
+  set('rpt-wfrom',toYMD(rp.WeekFrom||rp.ClassDate));set('rpt-wto',toYMD(rp.WeekTo||rp.ClassDate));set('rpt-year',rp.StudentYear);set('rpt-sem',rp.Semester);
   set('rpt-taj-topic',rp.TajweedTopic);set('rpt-taj-status',rp.TajweedStatus);set('rpt-trans',rp.TranslationStatus);set('rpt-surah',rp.SurahPracticed);
   set('rpt-att',rp.Attendance);set('rpt-tot',rp.TotalStudents);set('rpt-und',rp.UnderstandingLevel);
   set('rpt-obs',rp.Observations);set('rpt-issues',rp.Issues);set('rpt-sug',rp.Suggestions);
@@ -3152,7 +3223,7 @@ function reportHtml(r){
   const n=[r.LessonsList].join('').split(',').filter(Boolean).length;
   const box=(k,v)=>v?`<h3>${k}</h3><div class="rp-box">${esc(v)}</div>`:'';
   return `<div class="rp"><div class="rp-top"><div><div class="rp-k">Weekly teaching report</div><div class="rp-t">${esc(r.LecturerName||'—')}</div><div style="font-size:13px;color:#6b7280">${esc(r.DeptName||'')} · ${esc(r.CourseName||'')}</div></div><span class="rp-st" style="background:${st[0]};color:${st[1]}">${st[2]}</span></div>
-  <h3>Class details</h3><table class="kv">${kv('Week',esc(r.WeekNum))}${kv('Class date',fmtD(r.ClassDate))}${kv('Year / Semester',esc(r.StudentYear||'—')+' · '+esc(r.Semester||'—'))}${kv('Unit',esc(unitLabel(r.CourseID,r.BookUnit)))}${kv('Submitted on',fmtD(r.SubmittedAt))}</table>
+  <h3>Class details</h3><table class="kv">${kv('Week',esc(r.WeekNum))}${kv('Week period (from – to)',weekRange(r))}${kv('Year / Semester',esc(r.StudentYear||'—')+' · '+esc(r.Semester||'—'))}${kv('Unit',esc(unitLabel(r.CourseID,r.BookUnit)))}${kv('Submitted on',fmtD(r.SubmittedAt))}</table>
   <h3>Coverage</h3><table class="kv">${kv('Range covered (from – to)',rangeText(r,n))}${kv('Tajweed topic',esc(r.TajweedTopic||'—'))}${kv('Tajweed status',esc(r.TajweedStatus||'—'))}${kv('Translation',esc(r.TranslationStatus||'—'))}${kv('Surah practiced',esc(r.SurahPracticed||'—'))}${r.TopicsCovered?kv('Topics covered',esc(r.TopicsCovered).split('; ').join('<br>')):''}</table>
   <h3>Attendance and understanding</h3><table class="kv">${kv('Students present',(a||'—')+' of '+(t||'—')+(pc===null?'':' ('+pc+'%)'))}${kv('Understanding level',esc(r.UnderstandingLevel||'—'))}</table>
   ${box('Observations',r.Observations)}${box('Issues / challenges',r.Issues)}${box('Suggestions',r.Suggestions)}${box('Coordinator remarks',r.CoordRemarks)}</div>`;
@@ -3162,7 +3233,7 @@ function openPrint(title,body){const w=window.open('','_blank');if(!w){toast('Pl
 function printReport(){if(CUR_RPT)openPrint('Weekly teaching report',reportHtml(CUR_RPT));}
 function printReportsSummary(){
   if(!RPT_ROWS.length){toast('No reports to print','warn');return;}
-  openPrint('Weekly reports summary',`<table class="ls"><thead><tr><th>Lecturer</th><th>Department</th><th>Course / Unit</th><th>Week</th><th>Date</th><th>Lessons</th><th>Year / Sem</th><th>Attendance</th><th>Status</th></tr></thead><tbody>${RPT_ROWS.map(r=>`<tr><td>${esc(r.LecturerName)}</td><td>${esc(r.DeptName||'—')}</td><td>${esc(r.CourseName||'—')}<br>${esc(unitLabel(r.CourseID,r.BookUnit))}</td><td>${esc(r.WeekNum)}</td><td>${fmtD(r.ClassDate)}</td><td>${esc(rangeShort(r))}</td><td>${esc(r.StudentYear||'—')} · ${esc(r.Semester||'—')}</td><td>${esc(r.Attendance||'—')}/${esc(r.TotalStudents||'—')}</td><td>${esc(r.Status)}</td></tr>`).join('')}</tbody></table>`);
+  openPrint('Weekly reports summary',`<table class="ls"><thead><tr><th>Lecturer</th><th>Department</th><th>Course / Unit</th><th>Week</th><th>Date</th><th>Lessons</th><th>Year / Sem</th><th>Attendance</th><th>Status</th></tr></thead><tbody>${RPT_ROWS.map(r=>`<tr><td>${esc(r.LecturerName)}</td><td>${esc(r.DeptName||'—')}</td><td>${esc(r.CourseName||'—')}<br>${esc(unitLabel(r.CourseID,r.BookUnit))}</td><td>${esc(r.WeekNum)}</td><td>${weekRange(r)}</td><td>${esc(rangeShort(r))}</td><td>${esc(r.StudentYear||'—')} · ${esc(r.Semester||'—')}</td><td>${esc(r.Attendance||'—')}/${esc(r.TotalStudents||'—')}</td><td>${esc(r.Status)}</td></tr>`).join('')}</tbody></table>`);
 }
 // ── printable weekly timetable (per lecturer, with W.E.F. – end date) ──
 function printTimetable(){
@@ -3182,7 +3253,7 @@ document.head.insertAdjacentHTML('beforeend','<style>'+RP_CSS+'</style>');
 //  V3.3 — course content, course assignment, password change
 // ════════════════════════════════════════════════════════════
 let CONTENT={},COURSE_SEL=new Set(),ALL_C=false,TOPIC_SEL=new Set(),TOPIC_CID='';
-async function refreshMe(){if(!GAS_URL||!SESSION)return;const r=await apiRaw({action:'getMe'});if(r&&r.ok&&r.user){Object.assign(SESSION.user,r.user);localStorage.setItem('session',JSON.stringify(SESSION));}}
+async function refreshMe(){if(!GAS_URL||!SESSION)return;const r=await apiRaw({action:'getMe'});if(r&&r.ok&&r.user){Object.assign(SESSION.user,r.user);localStorage.setItem('session',JSON.stringify(SESSION));updateTeacherNav();}}
 function myCourses(){const u=SESSION&&SESSION.user;if(!u||u.role!=='teacher'||u.allCourses||!(u.courseIds||[]).length)return COURSES;return COURSES.filter(c=>u.courseIds.includes(c.CourseID));}
 function userCoursesText(u){
   if(u.Role!=='teacher')return esc(u.CourseName||'—');
@@ -3274,6 +3345,95 @@ function rangeText(r,n){
   if(isTopicCourse(r.CourseID)){const L=CONTENT[r.CourseID]||[],a=L.find(c=>c.SeqNo===+r.LessonsFrom),b=L.find(c=>c.SeqNo===+r.LessonsTo);
     return a&&b?esc(a.Topic)+(a===b?'':' → '+esc(b.Topic))+' <span style="color:#6b7280">(topics '+esc(r.LessonsFrom)+'–'+esc(r.LessonsTo)+')</span>':'Topics '+esc(r.LessonsFrom)+' – '+esc(r.LessonsTo);}
   return 'L'+esc(r.LessonsFrom)+' – L'+esc(r.LessonsTo)+(n?' ('+n+' lessons)':'');
+}
+
+// ════════════════════════════════════════════════════════════
+//  V3.4 — week dates, course types, Tajweed reports
+// ════════════════════════════════════════════════════════════
+const isTajweed=c=>(c.CourseType||'weekly')==='tajweed';
+function weeklyCourses(){return myCourses().filter(c=>!isTajweed(c));}
+function weekRange(r){return r.WeekFrom?fmtD(r.WeekFrom)+' – '+fmtD(r.WeekTo||r.WeekFrom):fmtD(r.ClassDate);}
+function onWeekFrom(){
+  const a=document.getElementById('rpt-wfrom').value,t=document.getElementById('rpt-wto');if(!a)return;
+  const d=new Date(a+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+6);
+  if(!t.value||t.value<a)t.value=d.toISOString().slice(0,10);
+}
+function updateTeacherNav(){const n=document.getElementById('nav-tajweed');if(n&&SESSION&&SESSION.user.role==='teacher')n.style.display=myCourses().some(isTajweed)?'':'none';}
+// ── admin: add / edit / delete courses ──
+function openCourseModal(id){
+  const c=id?COURSES.find(x=>x.CourseID===id):null,g=i=>document.getElementById(i);
+  g('c-id').value=c?c.CourseID:'';g('mcourse-title').textContent=c?'Edit Course':'Add Course';
+  g('c-name').value=c?c.CourseName:'';g('c-code').value=c?(c.CourseCode||''):'';
+  g('c-type').value=c?(c.CourseType||'weekly'):'weekly';g('c-type').disabled=!!c;
+  g('c-weeks').value=c?(c.TotalWeeks||16):16;g('c-sem').value=c?(c.Semester||''):'';g('c-desc').value=c?(c.Description||''):'';
+  g('c-dur').value=c?(c.Duration||''):'';g('c-from').value=c?(c.StartDate||''):'';g('c-to').value=c?(c.EndDate||''):'';
+  g('c-save').textContent=c?'Save Changes':'Add Course';
+  onCourseType();openModal('mcourse');
+}
+function onCourseType(){
+  const t=document.getElementById('c-type').value==='tajweed',s=(i,v)=>document.getElementById(i).style.display=v;
+  ['c-weeks-w','c-sem-w'].forEach(i=>s(i,t?'none':''));['c-dur-w','c-from-w','c-to-w'].forEach(i=>s(i,t?'':'none'));
+}
+async function saveCourse(){
+  const g=i=>document.getElementById(i).value,id=g('c-id'),type=g('c-type');
+  if(!g('c-name').trim()){toast('Course name is required','warn');return;}
+  if(type==='tajweed'){
+    if(!g('c-dur').trim()||!g('c-from')||!g('c-to')){toast('Duration, from date and to date are required for a Tajweed course','warn');return;}
+    if(g('c-to')<g('c-from')){toast('To date cannot be before the from date','warn');return;}
+  }
+  const r=await api({action:id?'updateCourse':'addCourse',courseId:id,courseName:g('c-name'),courseCode:g('c-code'),courseType:type,totalWeeks:g('c-weeks'),semester:g('c-sem'),description:g('c-desc'),duration:g('c-dur'),startDate:g('c-from'),endDate:g('c-to')});
+  if(!r.ok){toast(r.error||'Save failed','err');return;}
+  closeModal('mcourse');toast(id?'Course updated':'Course added','ok');await loadCourses();loadCourses2();
+}
+async function delCourse(id){
+  const c=COURSES.find(x=>x.CourseID===id);
+  if(!confirm('Delete "'+(c?c.CourseName:'this course')+'"?\n\nIt will be hidden from all lists. Existing reports are kept.'))return;
+  const r=await api({action:'deleteCourse',courseId:id});
+  if(r.ok){toast('Course deleted','ok');await loadCourses();loadCourses2();}else toast(r.error||'Delete failed','err');
+}
+// ── teacher: Tajweed course report ──
+let TJ_MY=[],TJ_ROWS=[];
+function calcAbsent(){const t=+document.getElementById('tj-total').value,p=+document.getElementById('tj-present').value;document.getElementById('tj-absent').value=(t>0&&p>=0&&p<=t)?t-p:'';}
+async function loadTajweedForm(){
+  const sel=document.getElementById('tj-course');fillOpts('tj-course',COURSES.filter(isTajweed).filter(c=>myCourses().includes(c)).map(c=>[c.CourseID,c.CourseName]));
+  if(!sel.value&&sel.options.length===2)sel.value=sel.options[1].value;
+  const r=await api({action:'getTajweedReports'});TJ_MY=r.ok?(r.reports||[]):[];
+  document.getElementById('tj-my-tbl').innerHTML=TJ_MY.length?TJ_MY.map(x=>`<tr><td><strong>${esc(x.CourseName)}</strong></td><td style="font-size:12px">${esc(x.Duration||'—')}</td><td style="font-size:12px;white-space:nowrap">${fmtD(x.FromDate)} – ${fmtD(x.ToDate)}</td><td>${x.TotalStrength}</td><td>${x.Present}</td><td>${x.Absent}</td><td><span class="b b-n">${esc(x.GenderType)}</span></td><td><button class="btn btn-out btn-xs" onclick="editTj('${esc(x.CourseID)}')">Edit</button></td></tr>`).join(''):'<tr><td colspan="8"><div class="empty"><div class="ei">📿</div><h3>No Tajweed reports yet</h3></div></td></tr>';
+  onTjCourse();
+}
+function onTjCourse(){
+  const g=i=>document.getElementById(i),c=COURSES.find(x=>x.CourseID===g('tj-course').value),old=c?TJ_MY.find(x=>x.CourseID===c.CourseID):null;
+  g('tj-dur').value=c?(c.Duration||'—'):'';g('tj-from').value=c&&c.StartDate?fmtD(c.StartDate):'';g('tj-to').value=c&&c.EndDate?fmtD(c.EndDate):'';
+  g('tj-total').value=old?old.TotalStrength:'';g('tj-present').value=old?old.Present:'';g('tj-gender').value=old?old.GenderType:'';
+  g('tj-save').textContent=old?'Update Report':'Submit Report';g('tj-form-title').textContent=old?'Update report':'Course report';calcAbsent();
+}
+function editTj(cid){document.getElementById('tj-course').value=cid;onTjCourse();window.scrollTo({top:0,behavior:'smooth'});}
+async function saveTajweed(){
+  const g=i=>document.getElementById(i).value;
+  if(!g('tj-course')){toast('Please select a Tajweed course','warn');return;}
+  if(!(+g('tj-total')>=1)){toast('Please enter the total strength','warn');return;}
+  if(g('tj-present')===''||+g('tj-present')<0||+g('tj-present')>+g('tj-total')){toast('Present students must be between 0 and the total strength','warn');return;}
+  if(!g('tj-gender')){toast('Please select Male, Female or Both','warn');return;}
+  const b=document.getElementById('tj-save');b.disabled=true;
+  const r=await api({action:'submitTajweedReport',courseId:g('tj-course'),totalStrength:g('tj-total'),present:g('tj-present'),gender:g('tj-gender')});
+  b.disabled=false;
+  if(!r.ok){toast(r.error||'Save failed','err');return;}
+  toast(r.updated?'Report updated':'Report submitted','ok');loadTajweedForm();
+}
+// ── admin / coordinator: Tajweed reports ──
+async function loadTjReports(p){
+  const g=id=>document.getElementById('tj-'+p+'-'+id);
+  fillOpts('tj-'+p+'-course',COURSES.filter(isTajweed).map(c=>[c.CourseID,c.CourseName]));
+  if(p==='admin'){if(!USERS_ALL.length){const u=await api({action:'getUsers'});if(u.ok)USERS_ALL=u.users;}fillOpts('tj-admin-lec',USERS_ALL.filter(u=>u.Role==='teacher').map(u=>[u.UserID,u.FullName]));}
+  const r=await api({action:'getTajweedReports',courseId:g('course').value,lecturerId:p==='admin'?g('lec').value:'',gender:g('gender').value});
+  if(!r.ok){toast(r.error||'Failed to load','err');return;}
+  const L=r.reports||[];TJ_ROWS=L;const sum=k=>L.reduce((t,x)=>t+x[k],0);
+  g('stats').innerHTML=statCards([['📿','Reports',L.length],['👥','Total strength',sum('TotalStrength')],['✅','Present',sum('Present')],['🚫','Absent',sum('Absent')]]);
+  g('tbl').innerHTML=L.length?L.map(x=>`<tr><td><strong>${esc(x.LecturerName)}</strong></td><td>${esc(x.CourseName)}</td><td style="font-size:12px">${esc(x.Duration||'—')}</td><td style="font-size:12px;white-space:nowrap">${fmtD(x.FromDate)} – ${fmtD(x.ToDate)}</td><td>${x.TotalStrength}</td><td>${x.Present}</td><td>${x.Absent}</td><td><span class="b b-n">${esc(x.GenderType)}</span></td><td style="font-size:11.5px;color:var(--muted)">${fmtDT(x.UpdatedAt)}</td></tr>`).join(''):'<tr><td colspan="9"><div class="empty"><div class="ei">📿</div><h3>No Tajweed reports found</h3></div></td></tr>';
+}
+function printTjReports(){
+  if(!TJ_ROWS.length){toast('No reports to print','warn');return;}
+  openPrint('Tajweed course reports',`<table class="ls"><thead><tr><th>Lecturer</th><th>Course</th><th>Duration</th><th>From – To</th><th>Total strength</th><th>Present</th><th>Absent</th><th>Type</th></tr></thead><tbody>${TJ_ROWS.map(x=>`<tr><td>${esc(x.LecturerName)}</td><td>${esc(x.CourseName)}</td><td>${esc(x.Duration||'—')}</td><td>${fmtD(x.FromDate)} – ${fmtD(x.ToDate)}</td><td>${x.TotalStrength}</td><td>${x.Present}</td><td>${x.Absent}</td><td>${esc(x.GenderType)}</td></tr>`).join('')}</tbody></table>`);
 }
 </script>
 </body>
