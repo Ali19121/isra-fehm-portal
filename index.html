@@ -515,6 +515,112 @@ tbody tr{transition:background .12s}
 .live-u{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;border-bottom:1px solid var(--border)}.ai-msg{padding:10px 13px;border-radius:10px;margin:8px 0;font-size:13px;line-height:1.6;max-width:92%}.ai-u{background:var(--navy);color:#fff;margin-left:auto}.ai-b{background:var(--bg);border:1px solid var(--border)}.ai-tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .cl-grid{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}@media(max-width:900px){.cl-grid{grid-template-columns:1fr}}
 .ttr{width:100%;border-collapse:separate;border-spacing:0;font-size:12px;min-width:980px}.ttr th{background:linear-gradient(135deg,#1a2744,#2d3f6e);color:#fff;padding:10px 8px;font-size:11.5px;letter-spacing:.04em;text-align:center}.ttr td{border-bottom:1px solid #ece8de;border-right:1px solid #f1eee6;vertical-align:top;padding:6px;min-width:112px}.ttr td.tn{background:#faf9f7;min-width:200px}.ttr tr:hover td{background:#fcfbf8}.ttr tr:hover td.tn{background:#f6f4ee}.ttc{border-radius:7px;padding:5px 8px;margin-bottom:5px;font-size:11px;line-height:1.35;box-shadow:0 1px 3px rgba(26,39,68,.08)}.ttc b{display:block;font-size:11.5px}.ttc .s{opacity:.85;font-size:10.5px}.avt{width:36px;height:36px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;box-shadow:0 2px 6px rgba(26,39,68,.25)}.ldb{height:9px;background:#eef0f4;border-radius:6px;overflow:hidden;margin-top:5px}.ldb div{height:100%;border-radius:6px}.ttleg{display:flex;gap:6px;flex-wrap:wrap}.ttleg span{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:10px}
+
+/* ═══ LANDING PAGE V2 ═══ */
+#auth{min-height:100vh;display:flex;align-items:stretch;overflow-x:hidden;background:#0a1330}
+.lp-left{position:relative;width:54%;display:flex;flex-direction:column;align-items:center;padding:34px 48px 40px;overflow:hidden;color:#fff;
+  background:radial-gradient(ellipse 70% 55% at 15% 10%,rgba(60,90,180,.45),transparent 60%),
+  radial-gradient(ellipse 60% 50% at 90% 95%,rgba(29,110,99,.5),transparent 60%),
+  linear-gradient(160deg,#091230 0%,#15234d 55%,#0c1736 100%)}
+.lp-pattern{position:absolute;inset:-50%;opacity:.07;animation:lpDrift 60s linear infinite;background-size:90px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90' viewBox='0 0 90 90'%3E%3Cg fill='none' stroke='%23c9a84c' stroke-width='1'%3E%3Cpath d='M45 5l10 20 20-10-10 20 20 10-20 10 10 20-20-10-10 20-10-20-20 10 10-20-20-10 20-10-10-20 20 10z'/%3E%3Ccircle cx='45' cy='45' r='8'/%3E%3C/g%3E%3C/svg%3E")}
+@keyframes lpDrift{to{transform:translate(90px,90px)}}
+.lp-orb{position:absolute;border-radius:50%;filter:blur(60px);animation:lpFloat 14s ease-in-out infinite}
+.lp-o1{width:320px;height:320px;background:#c9a84c;top:-90px;right:-80px;opacity:.28}
+.lp-o2{width:280px;height:280px;background:#24897b;bottom:-80px;left:-60px;opacity:.5;animation-delay:-5s}
+.lp-o3{width:200px;height:200px;background:#3d5bd9;top:45%;left:35%;opacity:.18;animation-delay:-9s}
+@keyframes lpFloat{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-40px) scale(1.12)}}
+.lp-ringbg{position:absolute;width:640px;height:640px;border-radius:50%;border:1px dashed rgba(201,168,76,.22);
+  top:50%;left:50%;margin:-320px 0 0 -320px;animation:spin 90s linear infinite}
+.lp-ringbg::after{content:'';position:absolute;inset:60px;border-radius:50%;border:1px solid rgba(201,168,76,.12)}
+.lp-dot{position:absolute;bottom:-10px;width:4px;height:4px;border-radius:50%;background:#e2bf72;box-shadow:0 0 10px #e2bf72;opacity:0;animation:lpRise 9s linear infinite}
+@keyframes lpRise{0%{transform:translateY(0);opacity:0}15%{opacity:.9}100%{transform:translateY(-75vh);opacity:0}}
+.lp-top{position:relative;z-index:2;text-align:center;width:100%}
+.lp-top::before{content:'';position:absolute;left:50%;top:50%;width:420px;height:120px;transform:translate(-50%,-50%);
+  background:radial-gradient(ellipse,rgba(201,168,76,.28),transparent 70%);animation:lpGlow 4s ease-in-out infinite}
+@keyframes lpGlow{0%,100%{opacity:.5;transform:translate(-50%,-50%) scale(.9)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}}
+.lp-bism{position:relative;font-family:'Amiri',serif;font-size:clamp(30px,4vw,50px);line-height:1.6;direction:rtl;
+  background:linear-gradient(100deg,#c9a84c 0%,#fff3c4 25%,#e2bf72 50%,#fff3c4 75%,#c9a84c 100%);background-size:250% 100%;
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  animation:lpReveal 1.8s cubic-bezier(.2,.8,.2,1) both,lpShine 5s linear 1.8s infinite}
+@keyframes lpReveal{from{opacity:0;filter:blur(14px) drop-shadow(0 0 0 transparent);transform:translateY(-16px) scale(.94)}
+  to{opacity:1;filter:blur(0) drop-shadow(0 0 16px rgba(201,168,76,.4));transform:none}}
+@keyframes lpShine{to{background-position:-250% 0}}
+.lp-orn{position:relative;height:1px;width:0;margin:8px auto 0;background:linear-gradient(90deg,transparent,#c9a84c,transparent);animation:lpLine 1.6s ease .9s forwards}
+.lp-orn::after{content:'';position:absolute;left:50%;top:50%;width:8px;height:8px;background:#c9a84c;transform:translate(-50%,-50%) rotate(45deg);box-shadow:0 0 12px #c9a84c}
+@keyframes lpLine{to{width:min(300px,70%)}}
+.lp-mid{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;max-width:430px}
+.lp-logo{position:relative;width:136px;height:136px;margin-bottom:26px;animation:lpUp .9s cubic-bezier(.2,.8,.2,1) .5s both}
+.lp-logo::before{content:'';position:absolute;inset:-7px;border-radius:50%;
+  background:conic-gradient(#c9a84c,transparent 30%,#e2bf72 55%,transparent 80%,#c9a84c);animation:spin 6s linear infinite;
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px));
+  mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px))}
+.lp-logo::after{content:'';position:absolute;inset:-18px;border-radius:50%;border:1px solid rgba(201,168,76,.25);animation:lpPing 3s ease-out infinite}
+@keyframes lpPing{from{transform:scale(.9);opacity:.8}to{transform:scale(1.25);opacity:0}}
+.lp-logo img{width:100%;height:100%;border-radius:50%;object-fit:cover;border:4px solid #0f1b3f;box-shadow:0 14px 40px rgba(0,0,0,.5)}
+.lp-mid h1{font-family:'Amiri',serif;font-size:44px;line-height:1.1;letter-spacing:.01em;animation:lpUp .9s ease .7s both;text-shadow:0 4px 20px rgba(0,0,0,.35)}
+.lp-sub{margin-top:10px;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.6);animation:lpUp .9s ease .85s both}
+.lp-line{width:60px;height:3px;border-radius:2px;margin:22px auto;background:linear-gradient(90deg,#c9a84c,#e2bf72);animation:lpUp .9s ease 1s both}
+.lp-pill{display:inline-flex;align-items:center;gap:10px;padding:11px 22px;border-radius:40px;font-size:14px;font-weight:600;color:#f6e6b0;
+  background:rgba(255,255,255,.06);border:1px solid rgba(201,168,76,.35);backdrop-filter:blur(8px);animation:lpUp .9s ease 1.15s both}
+.lp-pill i{width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 0 0 rgba(52,211,153,.7);animation:lpBeat 2s infinite}
+@keyframes lpBeat{70%{box-shadow:0 0 0 10px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+@keyframes lpUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+.lp-right{flex:1;display:flex;align-items:center;justify-content:center;padding:40px 24px;position:relative;
+  background:radial-gradient(circle at 85% 8%,#fff6dc 0%,transparent 42%),radial-gradient(circle at 5% 100%,#e4f1ee 0%,transparent 40%),#f4f3ef}
+.lp-card{position:relative;width:420px;max-width:100%;background:#fff;border-radius:22px;padding:36px 32px 24px;overflow:hidden;
+  box-shadow:0 35px 80px -25px rgba(26,39,68,.4),0 0 0 1px rgba(26,39,68,.05);animation:lpCard .9s cubic-bezier(.2,.8,.2,1) .2s both}
+@keyframes lpCard{from{opacity:0;transform:translateY(40px) scale(.96)}to{opacity:1;transform:none}}
+.lp-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;
+  background:linear-gradient(90deg,#1a2744,#c9a84c,#1d6e63,#c9a84c,#1a2744);background-size:200% 100%;animation:lpBar 4s linear infinite}
+@keyframes lpBar{to{background-position:-200% 0}}
+.lp-head{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+.lp-mini{width:52px;height:52px;flex-shrink:0;border-radius:14px;padding:4px;background:linear-gradient(135deg,#1a2744,#2d3f6e);box-shadow:0 8px 20px rgba(26,39,68,.3)}
+.lp-mini img{width:100%;height:100%;border-radius:10px;object-fit:cover}
+.lp-head h2{font-size:23px;font-weight:700;color:var(--navy);line-height:1.2}
+.lp-head p{font-size:12.5px;color:var(--muted);margin-top:3px}
+.lp-badge{display:inline-flex;align-items:center;gap:7px;padding:5px 13px;border-radius:20px;font-size:11.5px;font-weight:600;color:#7a5f10;
+  background:var(--gold-bg);border:1px solid #e8d48a;margin-bottom:20px}
+.lp-badge i{width:7px;height:7px;border-radius:50%;background:#c9a84c;animation:pdot 2s ease-in-out infinite}
+.lp-field{position:relative;margin-bottom:16px}
+.lp-field>svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:#9ca3af;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:stroke .2s}
+.lp-in{width:100%;padding:16px 44px 8px 44px;height:54px;border:1.5px solid var(--border);border-radius:12px;font-family:'Inter',sans-serif;font-size:14px;color:var(--text);background:#fafaf8;outline:none;transition:all .2s}
+.lp-in:focus{border-color:var(--navy);background:#fff;box-shadow:0 0 0 4px rgba(26,39,68,.08)}
+.lp-field:focus-within>svg{stroke:var(--navy)}
+.lp-field label{position:absolute;left:44px;top:50%;transform:translateY(-50%);font-size:13.5px;color:#9ca3af;pointer-events:none;transition:all .18s ease}
+.lp-in:focus+label,.lp-in:not(:placeholder-shown)+label{top:14px;font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--navy)}
+.lp-eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:none;background:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.lp-eye:hover{background:var(--bg)}
+.lp-eye svg{position:static;transform:none;width:18px;height:18px;stroke:#9ca3af;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.lp-btn{position:relative;width:100%;height:52px;margin-top:6px;border:none;border-radius:12px;cursor:pointer;overflow:hidden;
+  font-family:'Inter',sans-serif;font-size:14.5px;font-weight:600;color:#fff;letter-spacing:.02em;
+  background:linear-gradient(135deg,#1a2744,#2d3f6e 60%,#1d6e63);background-size:160% 100%;
+  display:flex;align-items:center;justify-content:center;transition:all .25s;box-shadow:0 12px 28px -8px rgba(26,39,68,.6)}
+.lp-btn:hover{background-position:100% 0;transform:translateY(-2px);box-shadow:0 18px 34px -10px rgba(26,39,68,.65)}
+.lp-btn:active{transform:translateY(0)}
+.lp-btn:disabled{opacity:.7;cursor:not-allowed}
+.lp-btn::after{content:'';position:absolute;top:0;left:-80%;width:50%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.28),transparent);transform:skewX(-20deg);transition:left .6s}
+.lp-btn:hover::after{left:130%}
+.lp-btn #login-btn-text{display:inline-flex;align-items:center;gap:9px}
+.lp-btn svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .25s}
+.lp-btn:hover svg{transform:translateX(4px)}
+.lp-foot{margin-top:20px;padding-top:16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:7px;font-size:11.5px;color:var(--subtle)}
+.lp-foot svg{width:13px;height:13px;stroke:var(--teal);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.auth-err{animation:lpShake .45s}
+@keyframes lpShake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+@media(max-width:860px){
+  #auth{flex-direction:column}
+  .lp-left{width:100%;padding:26px 20px 56px}
+  .lp-ringbg{width:420px;height:420px;margin:-210px 0 0 -210px}
+  .lp-logo{width:84px;height:84px;margin-bottom:16px}
+  .lp-mid h1{font-size:32px}
+  .lp-sub{font-size:11px}
+  .lp-line{margin:14px auto}
+  .lp-pill{font-size:12.5px;padding:9px 16px}
+  .lp-right{padding:0 16px 30px;align-items:flex-start}
+  .lp-card{margin-top:-28px;padding:28px 22px 20px}
+}
+@media(prefers-reduced-motion:reduce){#auth *{animation-duration:.01s!important;animation-iteration-count:1!important}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js"></script>
@@ -523,55 +629,58 @@ tbody tr{transition:background .12s}
 
 <!-- ═══════════ AUTH ═══════════ -->
 <div id="auth">
-  <!-- Left: Branding Panel -->
-  <div class="auth-left">
-    <div class="auth-left-inner">
-      <div class="auth-logo-ring">
-        <img id="auth-logo-img" src="" alt="Isra University">
-      </div>
+  <div class="lp-left">
+    <div class="lp-pattern"></div>
+    <div class="lp-orb lp-o1"></div><div class="lp-orb lp-o2"></div><div class="lp-orb lp-o3"></div>
+    <div class="lp-ringbg"></div>
+    <span class="lp-dot" style="left:12%;animation-delay:0s"></span>
+    <span class="lp-dot" style="left:28%;animation-delay:2s"></span>
+    <span class="lp-dot" style="left:46%;animation-delay:4s"></span>
+    <span class="lp-dot" style="left:63%;animation-delay:1s"></span>
+    <span class="lp-dot" style="left:78%;animation-delay:3s"></span>
+    <span class="lp-dot" style="left:90%;animation-delay:5s"></span>
+    <div class="lp-top">
+      <div class="lp-bism">بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ</div>
+      <div class="lp-orn"></div>
+    </div>
+    <div class="lp-mid">
+      <div class="lp-logo"><img id="auth-logo-img" src="" alt="Isra University"></div>
       <h1>Isra University</h1>
-      <p class="auth-tagline">Hyderabad, Sindh<br>Department of Islamic Studies</p>
-      <div class="auth-dividers"><span></span><span></span><span></span></div>
-      <div class="auth-stats">
-        <div class="auth-stat"><span class="asv">2</span><span class="asl">Courses</span></div>
-        <div class="auth-stat"><span class="asv">16</span><span class="asl">Weeks / Semester</span></div>
-        <div class="auth-stat"><span class="asv">3</span><span class="asl">User Roles</span></div>
-        <div class="auth-stat"><span class="asv">Live</span><span class="asl">Google Sheets</span></div>
-      </div>
-      <span class="auth-arabesque">بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ</span>
+      <div class="lp-sub">Hyderabad, Sindh &nbsp;•&nbsp; Department of Islamic Studies</div>
+      <div class="lp-line"></div>
+      <div class="lp-pill"><i></i> Fehm-e-Quran Course Monitoring Portal</div>
     </div>
   </div>
-
-  <!-- Right: Login Form -->
-  <div class="auth-right">
-    <div class="auth-card">
-      <div class="auth-card-head">
-        <div class="ac-logo"><img id="auth-logo-img2" src="" alt="IU"></div>
-        <h2>Welcome Back</h2>
-        <p>Sign in to Fehm-e-Quran Monitoring Portal</p>
+  <div class="lp-right">
+    <div class="lp-card">
+      <div class="lp-head">
+        <div class="lp-mini"><img id="auth-logo-img2" src="" alt="IU"></div>
+        <div><h2>Welcome Back</h2><p>Sign in to Fehm-e-Quran Monitoring Portal</p></div>
       </div>
-      <div class="auth-welcome-badge">🕌 Isra University Portal</div>
+      <div class="lp-badge"><i></i> Isra University Portal</div>
       <div id="auth-err" class="auth-err"></div>
-      <div class="fl">
-        <label>Username</label>
-        <input class="fi" id="inp-user" type="text" placeholder="Enter your username" autocomplete="username">
+      <div class="lp-field">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+        <input class="lp-in" id="inp-user" type="text" placeholder=" " autocomplete="username"
+          onkeydown="if(event.key==='Enter')document.getElementById('inp-pass').focus()">
+        <label for="inp-user">Username</label>
       </div>
-      <div class="fl">
-        <label>Password</label>
-        <input class="fi" id="inp-pass" type="password" placeholder="Enter your password"
-          autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      <div class="lp-field">
+        <svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <input class="lp-in" id="inp-pass" type="password" placeholder=" " autocomplete="current-password"
+          onkeydown="if(event.key==='Enter')doLogin()">
+        <label for="inp-pass">Password</label>
+        <button type="button" class="lp-eye" onclick="lpTogglePw()" aria-label="Show password">
+          <svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
       </div>
-      <button class="btn-signin" id="login-btn" onclick="doLogin()">
-        <span id="login-btn-text">Sign In →</span>
+      <button class="lp-btn" id="login-btn" onclick="doLogin()">
+        <span id="login-btn-text">Sign In <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
         <span id="login-spin" style="display:none"><div class="spin"></div></span>
       </button>
-      <div class="demo-wrap">
-        </p>Quick Demo Login</p>
-        <div class="demo-pills">
-          <div class="demo-pill" onclick="ql('admin','')">👑 Admin</div>
-          <div class="demo-pill" onclick="ql('coord1','')">📋 Coordinator</div>
-          <div class="demo-pill" onclick="ql('teacher1','')">👩‍🏫 Teacher</div>
-        </div>
+      <div class="lp-foot">
+        <svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg>
+        Secure sign-in &nbsp;•&nbsp; © Isra University
       </div>
     </div>
   </div>
@@ -1726,6 +1835,10 @@ function demo(p) {
 // ════════════════════════════════════════════════════════════
 //  AUTH
 // ════════════════════════════════════════════════════════════
+function lpTogglePw(){
+  const i=document.getElementById('inp-pass');
+  i.type=i.type==='password'?'text':'password';
+}
 function ql(u,p) { document.getElementById('inp-user').value=u; document.getElementById('inp-pass').value=p; doLogin(); }
 
 async function doLogin() {
