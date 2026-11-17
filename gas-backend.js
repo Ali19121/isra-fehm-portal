@@ -118,6 +118,13 @@ function doPost(e) {
       case 'updateTimetableSlot': return respond(updateTimetableSlot(caller, body));
       case 'deleteTimetableSlot': return respond(deleteTimetableSlot(caller, body));
 
+      case 'getMyNotifications':  return respond(getMyNotifications(caller));
+      case 'markNotificationRead': return respond(markNotificationRead(caller, body));
+      case 'getNotifications':    return respond(getNotifications(caller));
+      case 'getNotificationSeen': return respond(getNotificationSeen(caller, body));
+      case 'saveNotification':    return respond(saveNotification(caller, body));
+      case 'setNotificationStatus': return respond(setNotificationStatus(caller, body));
+      case 'deleteNotification':  return respond(deleteNotification(caller, body));
       case 'updateCourse':        return respond(updateCourse(caller, body));
       case 'deleteCourse':        return respond(deleteCourse(caller, body));
       case 'submitTajweedReport': return respond(submitTajweedReport(caller, body));
@@ -899,6 +906,7 @@ function migrateSheets() {
   ensureCols(ss.getSheetByName(SH.TIMETABLE), TT_NEW_COLS);
   migrateCourses();
   seedCourseContent();
+  ntSheet(ss); nrSheet(ss);   // notification sheets
   console.log('✅ Migration done — existing data untouched.');
 }
 
@@ -1757,4 +1765,150 @@ function deleteTimetableSlot(caller, body) {
   sheet.deleteRow(i + 1);
   writeLog(ss, caller.id, caller.username, caller.role, 'Delete Timetable Slot', body.slotId);
   return { ok:true };
+}
+
+// ============================================================
+//  V3.6 — notifications / alerts (popup after login)
+//  Admin creates, edits, pauses and deletes. Audience: all · all coordinators · all teachers · selected people.
+//  Sheets "Notifications" and "NotificationReads" are created automatically.
+// ============================================================
+const NT_HEADERS = ['NotifID','Title','Message','Priority','Audience','TargetIDs','StartDate','EndDate','Repeat','Status','CreatedBy','CreatedAt','UpdatedAt'];
+const NR_HEADERS = ['NotifID','UserID','ReadAt'];
+function ntMake(ss, name, headers) {
+  let sh = ss.getSheetByName(name);
+  if (!sh) {
+    sh = ss.insertSheet(name); sh.appendRow(headers);
+    sh.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#1a2744').setFontColor('#ffffff'); sh.setFrozenRows(1);
+  }
+  return sh;
+}
+function ntSheet(ss) { return ntMake(ss, 'Notifications', NT_HEADERS); }
+function nrSheet(ss) { return ntMake(ss, 'NotificationReads', NR_HEADERS); }
+function ntObj(h, r, ss) {
+  const o = rowToObj(h, r);
+  o.StartDate = ymdTz(o.StartDate, ss); o.EndDate = ymdTz(o.EndDate, ss);
+  o.Repeat = String(o.Repeat).toLowerCase() === 'yes';
+  o.TargetList = String(o.TargetIDs || '').split(',').filter(Boolean);
+  return o;
+}
+function ntTargeted(o, id, role) {
+  if (o.Audience === 'all')          return role === 'coordinator' || role === 'teacher';
+  if (o.Audience === 'coordinators') return role === 'coordinator';
+  if (o.Audience === 'teachers')     return role === 'teacher';
+  return o.TargetList.includes(id);
+}
+function ntRecipients(o, users) { return users.filter(u => u.status === 'active' && ntTargeted(o, u.id, u.role)); }
+function ntUsers(ss) {
+  const d = ss.getSheetByName(SH.USERS).getDataRange().getValues(), h = d[0], ix = n => h.indexOf(n);
+  return d.slice(1).map(r => ({ id:r[ix('UserID')], name:r[ix('FullName')], role:r[ix('Role')], status:r[ix('Status')] })).filter(u => u.id);
+}
+const NT_RANK = { urgent:0, important:1, info:2 };
+
+function getMyNotifications(caller) {
+  if (caller.role === 'admin') return { ok:true, notifications:[] };
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID), today = todayYmd();
+  const nd = ntSheet(ss).getDataRange().getValues(), nh = nd[0];
+  const reads = new Set(nrSheet(ss).getDataRange().getValues().slice(1).filter(r => r[1] === caller.id).map(r => r[0]));
+  const list = nd.slice(1).map(r => ntObj(nh, r, ss))
+    .filter(o => o.NotifID && o.Status !== 'inactive' && (!o.StartDate || o.StartDate <= today) && (!o.EndDate || o.EndDate >= today) && ntTargeted(o, caller.id, caller.role))
+    .map(o => ({ NotifID:o.NotifID, Title:o.Title, Message:o.Message, Priority:o.Priority, Repeat:o.Repeat, Read:reads.has(o.NotifID), EndDate:o.EndDate, CreatedAt:o.CreatedAt }));
+  list.sort((a, b) => (NT_RANK[a.Priority] - NT_RANK[b.Priority]) || String(b.CreatedAt).localeCompare(String(a.CreatedAt)));
+  return { ok:true, notifications:list };
+}
+function markNotificationRead(caller, body) {
+  if (!body.notifId) return { ok:false, error:'Notification is required.' };
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const sh = nrSheet(SpreadsheetApp.openById(SPREADSHEET_ID));
+    const seen = sh.getDataRange().getValues().slice(1).some(r => r[0] === body.notifId && r[1] === caller.id);
+    if (!seen) sh.appendRow([body.notifId, caller.id, now()]);
+    return { ok:true };
+  } finally { lock.releaseLock(); }
+}
+function getNotifications(caller) {
+  if (caller.role !== 'admin') return { ok:false, error:'Forbidden' };
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID), nd = ntSheet(ss).getDataRange().getValues(), nh = nd[0];
+  const users = ntUsers(ss), name = {}; users.forEach(u => name[u.id] = u.name);
+  const reads = nrSheet(ss).getDataRange().getValues().slice(1);
+  const list = nd.slice(1).map(r => ntObj(nh, r, ss)).filter(o => o.NotifID).map(o => {
+    const rec = ntRecipients(o, users), ids = new Set(rec.map(u => u.id));
+    const seen = new Set(reads.filter(r => r[0] === o.NotifID && ids.has(r[1])).map(r => r[1]));
+    return Object.assign(o, { RecipientCount:rec.length, SeenCount:seen.size, TargetNames:o.TargetList.map(id => name[id] || id).join(', ') });
+  });
+  list.sort((a, b) => String(b.CreatedAt).localeCompare(String(a.CreatedAt)));
+  return { ok:true, notifications:list };
+}
+function getNotificationSeen(caller, body) {
+  if (caller.role !== 'admin') return { ok:false, error:'Forbidden' };
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID), nd = ntSheet(ss).getDataRange().getValues(), nh = nd[0];
+  const r0 = nd.slice(1).find(r => r[nh.indexOf('NotifID')] === body.notifId);
+  if (!r0) return { ok:false, error:'Notification not found.' };
+  const o = ntObj(nh, r0, ss), at = {};
+  nrSheet(ss).getDataRange().getValues().slice(1).filter(r => r[0] === body.notifId).forEach(r => at[r[1]] = r[2]);
+  return { ok:true, recipients:ntRecipients(o, ntUsers(ss)).map(u => ({ id:u.id, name:u.name, role:u.role, seen:!!at[u.id], readAt:at[u.id] || '' })) };
+}
+function saveNotification(caller, body) {
+  if (caller.role !== 'admin') return { ok:false, error:'Forbidden' };
+  const title = String(body.title || '').trim().slice(0, 120), msg = String(body.message || '').trim().slice(0, 2000);
+  if (!title) return { ok:false, error:'Title is required.' };
+  if (!msg)   return { ok:false, error:'Message is required.' };
+  const pri = body.priority || 'info';
+  if (!NT_RANK.hasOwnProperty(pri)) return { ok:false, error:'Invalid priority.' };
+  const aud = body.audience || 'all';
+  if (!['all', 'coordinators', 'teachers', 'selected'].includes(aud)) return { ok:false, error:'Invalid audience.' };
+  const sd = String(body.startDate || ''), ed = String(body.endDate || '');
+  if ((sd && !ymdOk(sd)) || (ed && !ymdOk(ed))) return { ok:false, error:'Please check the start and end dates.' };
+  if (sd && ed && dayDiff(sd, ed) < 0) return { ok:false, error:'End date cannot be before the start date.' };
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sh = ntSheet(ss), d = sh.getDataRange().getValues(), h = d[0];
+    let ids = [];
+    if (aud === 'selected') {
+      const ok = ntUsers(ss).filter(u => u.status === 'active' && (u.role === 'teacher' || u.role === 'coordinator')).map(u => u.id);
+      ids = (body.targetIds || []).map(String).filter(id => ok.includes(id));
+      if (!ids.length) return { ok:false, error:'Select at least one person.' };
+    }
+    const rec = { Title:title, Message:msg, Priority:pri, Audience:aud, TargetIDs:ids.join(','), StartDate:sd, EndDate:ed, Repeat:body.repeat ? 'yes' : '', UpdatedAt:now() };
+    let id = body.notifId, rowNo;
+    if (id) {
+      const i = d.findIndex((r, k) => k > 0 && r[h.indexOf('NotifID')] === id);
+      if (i < 0) return { ok:false, error:'Notification not found.' };
+      const o = Object.assign(rowToObj(h, d[i]), rec);
+      sh.getRange(i + 1, 1, 1, h.length).setValues([h.map(c => o[c] !== undefined ? o[c] : '')]); rowNo = i + 1;
+      if (body.resend) {
+        const rs = nrSheet(ss), rd = rs.getDataRange().getValues();
+        for (let k = rd.length - 1; k > 0; k--) if (rd[k][0] === id) rs.deleteRow(k + 1);
+      }
+    } else {
+      id = 'NT' + String(Date.now()).slice(-7) + String(Math.floor(Math.random() * 900) + 100);
+      const o = Object.assign({ NotifID:id, Status:'active', CreatedBy:caller.id, CreatedAt:now() }, rec);
+      sh.appendRow(h.map(c => o[c] !== undefined ? o[c] : '')); rowNo = sh.getLastRow();
+    }
+    ['StartDate', 'EndDate'].forEach(c => sh.getRange(rowNo, h.indexOf(c) + 1).setNumberFormat('@').setValue(rec[c] || ''));
+    writeLog(ss, caller.id, caller.username, caller.role, body.notifId ? 'Edit Notification' : 'Add Notification', title + ' (' + aud + ')');
+    return { ok:true, notifId:id };
+  } finally { lock.releaseLock(); }
+}
+function setNotificationStatus(caller, body) {
+  if (caller.role !== 'admin') return { ok:false, error:'Forbidden' };
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sh = ntSheet(ss), d = sh.getDataRange().getValues(), h = d[0];
+  const i = d.findIndex((r, k) => k > 0 && r[h.indexOf('NotifID')] === body.notifId);
+  if (i < 0) return { ok:false, error:'Notification not found.' };
+  sh.getRange(i + 1, h.indexOf('Status') + 1).setValue(body.status === 'inactive' ? 'inactive' : 'active');
+  writeLog(ss, caller.id, caller.username, caller.role, 'Notification ' + (body.status === 'inactive' ? 'Paused' : 'Resumed'), body.notifId);
+  return { ok:true };
+}
+function deleteNotification(caller, body) {
+  if (caller.role !== 'admin') return { ok:false, error:'Forbidden' };
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID), sh = ntSheet(ss), d = sh.getDataRange().getValues();
+    const i = d.findIndex((r, k) => k > 0 && r[0] === body.notifId);
+    if (i < 0) return { ok:false, error:'Notification not found.' };
+    sh.deleteRow(i + 1);
+    const rs = nrSheet(ss), rd = rs.getDataRange().getValues();
+    for (let k = rd.length - 1; k > 0; k--) if (rd[k][0] === body.notifId) rs.deleteRow(k + 1);
+    writeLog(ss, caller.id, caller.username, caller.role, 'Delete Notification', body.notifId);
+    return { ok:true };
+  } finally { lock.releaseLock(); }
 }
