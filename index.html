@@ -621,6 +621,30 @@ tbody tr{transition:background .12s}
   .lp-card{margin-top:-28px;padding:28px 22px 20px}
 }
 @media(prefers-reduced-motion:reduce){#auth *{animation-duration:.01s!important;animation-iteration-count:1!important}}
+
+.np-ov{position:fixed;inset:0;background:rgba(13,26,56,.62);backdrop-filter:blur(5px);z-index:3000;display:flex;align-items:center;justify-content:center;padding:16px;animation:npFade .25s ease}
+.np-card{width:540px;max-width:100%;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.45);animation:npIn .45s cubic-bezier(.2,1.2,.3,1)}
+@keyframes npIn{from{opacity:0;transform:translateY(30px) scale(.92)}to{opacity:1;transform:none}}
+@keyframes npFade{from{opacity:0}to{opacity:1}}
+@keyframes npSwing{0%,100%{transform:rotate(0)}15%{transform:rotate(16deg)}30%{transform:rotate(-14deg)}45%{transform:rotate(10deg)}60%{transform:rotate(-6deg)}75%{transform:rotate(3deg)}}
+@keyframes npPulse{0%{box-shadow:0 0 0 0 rgba(255,255,255,.55)}100%{box-shadow:0 0 0 22px rgba(255,255,255,0)}}
+.np-head{display:flex;align-items:center;gap:16px;padding:24px 26px;color:#fff;position:relative;overflow:hidden}
+.np-head::after{content:'﷽';font-family:'Amiri',serif;font-size:64px;position:absolute;right:14px;top:50%;transform:translateY(-50%);opacity:.1}
+.np-info{background:linear-gradient(135deg,#1a2744,#2d3f6e)}.np-imp{background:linear-gradient(135deg,#b45309,#f59e0b)}.np-urg{background:linear-gradient(135deg,#991b1b,#ef4444)}
+.np-ring{width:62px;height:62px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;flex-shrink:0;animation:npPulse 1.8s ease-out infinite}
+.np-icon{font-size:30px;animation:npSwing 1.6s ease .4s 2}
+.np-tag{font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.85;font-weight:700}
+.np-ttl{font-size:20px;font-weight:700;line-height:1.3;margin-top:2px;position:relative;z-index:1}
+.np-body{padding:22px 26px 6px;max-height:50vh;overflow:auto}
+.np-msg{font-size:14.5px;line-height:1.7;color:#1a1a2e;white-space:pre-wrap;word-break:break-word}
+.np-meta{font-size:11.5px;color:#6b7280;margin-top:14px;padding-top:10px;border-top:1px dashed #e4dfd4}
+.np-foot{display:flex;justify-content:space-between;align-items:center;padding:16px 26px 22px;gap:10px;flex-wrap:wrap}
+.np-dots span{display:inline-block;width:8px;height:8px;border-radius:5px;background:#d6d3c8;margin-right:5px}.np-dots span.on{background:#c9a84c;width:22px}
+.bell-btn{position:relative;background:#fff;border:1px solid var(--border);border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;flex-shrink:0}.bell-btn:hover{background:var(--gold-bg)}
+.bell-cnt{position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;font-size:9px;font-weight:700;border-radius:9px;min-width:16px;padding:2px 4px;line-height:1.1}
+.pri-opt{flex:1;padding:10px 6px;border:2px solid var(--border);border-radius:9px;text-align:center;cursor:pointer;font-weight:600;font-size:12.5px;transition:all .13s;background:#fff}
+.pri-opt.sel-info{border-color:#1a2744;background:#eef1f8;color:#1a2744}.pri-opt.sel-important{border-color:#d97706;background:#fffbeb;color:#92400e}.pri-opt.sel-urgent{border-color:#dc2626;background:#fef2f2;color:#991b1b}
+.nt-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js"></script>
@@ -707,6 +731,7 @@ tbody tr{transition:background .12s}
     <div id="nav-admin" style="display:none">
       <div class="sb-sec"><div class="sb-sec-lbl">Main</div>
         <div class="ni active" data-panel="admin-dash"><span class="ni-icon">📊</span>Dashboard</div>
+        <div class="ni" data-panel="admin-notify"><span class="ni-icon">🔔</span>Notifications</div>
         <div class="ni" data-panel="admin-depts"><span class="ni-icon">🏛️</span>Departments</div>
         <div class="ni" data-panel="admin-users"><span class="ni-icon">👥</span>Manage Users</div>
         <div class="ni" data-panel="admin-courses"><span class="ni-icon">📚</span>Courses</div>
@@ -773,6 +798,7 @@ tbody tr{transition:background .12s}
           <img id="tb-logo" src="" alt="" style="width:20px;height:20px;border-radius:50%;object-fit:cover;opacity:.9">
           <span style="font-size:11.5px;font-weight:600;color:rgba(255,255,255,.9)">Isra University</span>
         </div>
+        <button class="bell-btn" id="tb-bell" style="display:none" title="Notifications" onclick="openNoticeBoard()">🔔<span class="bell-cnt" id="tb-bell-cnt" style="display:none">0</span></button>
         <div class="wk-chip" id="tb-wk">Week —</div>
         <div class="tb-date" id="tb-date"></div>
       </div>
@@ -800,6 +826,7 @@ tbody tr{transition:background .12s}
           <span class="live-cd" id="admin-cd">Next in 60s</span>
           <button class="ref-btn" onclick="manualRefresh('admin')">↻ Refresh</button>
         </div>
+        <div class="card" style="margin-bottom:16px;border-left:4px solid var(--gold)"><div class="card-bd" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="display:flex;align-items:center;gap:12px"><div style="font-size:26px">🔔</div><div><div style="font-weight:700;color:var(--navy)">Notifications and alerts</div><div style="font-size:12px;color:var(--muted)">Send a popup alert to coordinators and teachers. They see it right after login.</div></div></div><div style="display:flex;gap:8px"><button class="btn btn-out btn-sm" onclick="goPanel('admin-notify')">Manage</button><button class="btn btn-gold btn-sm" onclick="openNotifModal()">+ New Notification</button></div></div></div>
         <div class="card" style="margin-bottom:16px"><div class="card-hd"><div class="card-title">🟢 Live Staff</div><span class="b b-g" id="live-cnt">0 online</span></div><div class="card-bd" id="live-list" style="max-height:220px;overflow:auto"><div style="color:var(--muted);font-size:12px">Loading…</div></div></div>
         <div class="stats-row" id="admin-stats"></div>
         <div class="g2">
@@ -1357,6 +1384,16 @@ tbody tr{transition:background .12s}
         </table></div></div>
       </div>
 
+      <div id="panel-admin-notify" class="panel">
+        <div class="sec-hd"><div><div class="sec-title">Notifications and Alerts</div><div class="sec-sub">Popup alerts shown to coordinators and teachers after they log in</div></div>
+          <button class="btn btn-gold" onclick="openNotifModal()">+ New Notification</button></div>
+        <div class="stats-row" id="nt-stats"></div>
+        <div class="card"><div class="tw"><table>
+          <thead><tr><th>Notification</th><th>Shown to</th><th>Valid</th><th>Seen</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="nt-tbl"><tr><td colspan="6"><div class="empty"><div class="spin spin-d"></div></div></td></tr></tbody>
+        </table></div></div>
+      </div>
+
       <div id="panel-t-history" class="panel">
         <div class="sec-hd"><div class="sec-title">My Report History</div><button class="btn btn-out btn-sm" onclick="exportCSV('t-hist-tbl','my-reports.csv')">📥 Export</button></div>
         <div class="card"><div class="tw"><table>
@@ -1450,6 +1487,58 @@ tbody tr{transition:background .12s}
    <input type="hidden" id="c-id">
   </div>
   <div class="modal-ft"><button class="btn btn-out" onclick="closeModal('mcourse')">Cancel</button><button class="btn btn-navy" id="c-save" onclick="saveCourse()">Add Course</button></div>
+ </div>
+</div>
+
+<!-- ══ NOTIFICATION POPUP ══ -->
+<div class="np-ov" id="npop" style="display:none">
+ <div class="np-card">
+  <div class="np-head np-info" id="np-head"><div class="np-ring"><div class="np-icon" id="np-icon">🔔</div></div><div style="position:relative;z-index:1"><div class="np-tag" id="np-tag">Information</div><div class="np-ttl" id="np-ttl"></div></div></div>
+  <div class="np-body"><div class="np-msg" id="np-msg"></div><div class="np-meta" id="np-meta"></div></div>
+  <div class="np-foot"><div class="np-dots" id="np-dots"></div><div style="display:flex;gap:8px"><button class="btn btn-out" id="np-later" onclick="laterNotif()">Remind me later</button><button class="btn btn-gold" id="np-ok" onclick="ackNotif()">Got it</button></div></div>
+ </div>
+</div>
+
+<!-- ══ MODAL: NOTICE BOARD (teacher / coordinator) ══ -->
+<div class="modal-ov" id="mnotice" style="display:none" onclick="closeOv(event,'mnotice')">
+ <div class="modal">
+  <div class="modal-hd"><h3>🔔 Notifications</h3><button class="modal-x" onclick="closeModal('mnotice')">✕</button></div>
+  <div class="modal-bd" id="notice-list"></div>
+ </div>
+</div>
+
+<!-- ══ MODAL: ADD / EDIT NOTIFICATION ══ -->
+<div class="modal-ov" id="mnotif" style="display:none" onclick="closeOv(event,'mnotif')">
+ <div class="modal modal-lg">
+  <div class="modal-hd"><h3 id="mnotif-title">New Notification</h3><button class="modal-x" onclick="closeModal('mnotif')">✕</button></div>
+  <div class="modal-bd">
+   <div class="fg-grid">
+    <div class="fg"><label>Title *</label><input type="text" id="nf-title" maxlength="120" placeholder="e.g. Staff meeting on Monday"></div>
+    <div class="fg"><label>Message *</label><textarea id="nf-msg" maxlength="2000" style="min-height:110px" placeholder="Write the notification text…"></textarea></div>
+    <div class="fg"><label>Priority</label>
+     <div style="display:flex;gap:8px"><div class="pri-opt" id="pri-info" onclick="setPri('info')">🔔 Information</div><div class="pri-opt" id="pri-important" onclick="setPri('important')">📢 Important</div><div class="pri-opt" id="pri-urgent" onclick="setPri('urgent')">🚨 Urgent</div></div><input type="hidden" id="nf-pri" value="info"></div>
+    <div class="fg"><label>Show this popup to</label><select id="nf-aud" onchange="onNfAud()"><option value="all">Everyone (all coordinators and teachers)</option><option value="coordinators">All coordinators</option><option value="teachers">All teachers</option><option value="selected">Selected people…</option></select></div>
+    <div class="fg" id="nf-people-w" style="display:none"><label>Select people</label>
+     <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap"><input class="fi" id="nf-q" style="flex:1;min-width:150px;padding:6px 10px" placeholder="Search…" oninput="renderNfPeople()"><button class="btn btn-out btn-xs" onclick="nfPickRole('coordinator')">All coordinators</button><button class="btn btn-out btn-xs" onclick="nfPickRole('teacher')">All teachers</button><button class="btn btn-out btn-xs" onclick="nfPickRole('')">Clear</button></div>
+     <div id="nf-people" style="max-height:200px;overflow:auto;border:1px solid var(--border);border-radius:7px;padding:6px"></div><div class="hint" id="nf-people-hint"></div></div>
+    <div class="fg-grid c2">
+     <div class="fg"><label>Show from (optional)</label><input type="date" id="nf-from"></div>
+     <div class="fg"><label>Show until (optional)</label><input type="date" id="nf-to"></div>
+    </div>
+    <label style="display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer"><input type="checkbox" id="nf-repeat"> Show at every login until the end date (even after it has been seen)</label>
+    <label style="display:none;gap:8px;align-items:center;font-size:13px;cursor:pointer" id="nf-resend-w"><input type="checkbox" id="nf-resend"> Show again to people who have already seen it</label>
+   </div>
+   <input type="hidden" id="nf-id">
+  </div>
+  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal('mnotif')">Cancel</button><button class="btn btn-out" onclick="previewNotif()">👁 Preview</button><button class="btn btn-navy" id="nf-save" onclick="saveNotif()">Publish</button></div>
+ </div>
+</div>
+
+<!-- ══ MODAL: WHO SAW IT ══ -->
+<div class="modal-ov" id="mseen" style="display:none" onclick="closeOv(event,'mseen')">
+ <div class="modal">
+  <div class="modal-hd"><h3 id="mseen-title">Seen by</h3><button class="modal-x" onclick="closeModal('mseen')">✕</button></div>
+  <div class="modal-bd" id="seen-body"></div>
  </div>
 </div>
 
@@ -1687,7 +1776,7 @@ const D_LOGS = [
 async function apiRaw(payload) {
   if (!GAS_URL) return demo(payload);
   try {
-    if(payload.action!=='sync')showLoader(true);
+    if(payload.action!=='sync'&&payload.action!=='getMyNotifications')showLoader(true);
     const body = 'data=' + encodeURIComponent(JSON.stringify({...payload, token: SESSION?.token||''}));
     const res  = await fetch(GAS_URL, {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body});
     const text = await res.text();
@@ -1872,6 +1961,7 @@ function showAuthErr(msg) {
 }
 
 function doLogout() {
+  if(typeof closeNotif==='function')closeNotif();
   stopAllAR();
   SESSION=null;
   document.getElementById('app').style.display='none';
@@ -1915,6 +2005,9 @@ function bootApp() {
     updateTeacherNav();
     const defaults={admin:'admin-dash',coordinator:'coord-dash',teacher:'t-dash'};
     showPanel(defaults[u.role]||'admin-dash');
+    NT_SHOWN=new Set();NT_ACK=new Set();NT_OPEN=false;NT_LIST=[];
+    document.getElementById('tb-bell').style.display=u.role==='admin'?'none':'';
+    if(u.role!=='admin')checkNotifications();
   });
 }
 
@@ -1924,7 +2017,7 @@ function bootApp() {
 const PANEL_TITLES = {
   'admin-dash':'Dashboard','admin-depts':'Departments','admin-users':'Manage Users',
   'admin-courses':'Courses','admin-reports':'All Reports','admin-schedule':'Course Schedule',
-  'admin-timetable':'Timetable','admin-compare':'Plan vs Actual','admin-hours':'Teaching Hours','t-classlog':'Class Log','admin-tajweed':'Tajweed Reports','coord-tajweed':'Tajweed Reports','t-tajweed':'Tajweed Course Report','admin-ai':'AI Assistant','admin-logs':'Activity Logs','admin-settings':'Settings',
+  'admin-timetable':'Timetable','admin-compare':'Plan vs Actual','admin-hours':'Teaching Hours','t-classlog':'Class Log','admin-tajweed':'Tajweed Reports','admin-notify':'Notifications','coord-tajweed':'Tajweed Reports','t-tajweed':'Tajweed Course Report','admin-ai':'AI Assistant','admin-logs':'Activity Logs','admin-settings':'Settings',
   'coord-dash':'Dashboard','coord-teachers':'My Lecturers','coord-reports':'Review Reports',
   'coord-timetable':'Timetable','coord-summary':'Weekly Summary',
   't-dash':'My Dashboard','t-submit':'Submit Report','t-history':'My Reports',
@@ -1940,6 +2033,7 @@ const PANEL_LOADERS = {
   'admin-timetable': loadAdminTT,
   'admin-compare':   loadCompare,
   'admin-hours':     loadHours,
+  'admin-notify':    loadNotify,
   'admin-tajweed':   ()=>loadTjReports('admin'),
   'coord-tajweed':   ()=>loadTjReports('coord'),
   't-tajweed':       loadTajweedForm,
@@ -2868,7 +2962,7 @@ window.bootApp=function(){localStorage.setItem('session',JSON.stringify(SESSION)
 // ════════════════════════════════════════════════════════════
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let RC={},INF={},LASTVER=null,SYNCT=null,CUR='',EDIT_ID='',EDIT_PENDING=null,MYRPT=[],AIH=[],AIR=[];
-const RO=new Set(['getDepartments','getCourses','getUsers','getReports','getDashboardStats','getTimetable','getWeeklyPlan','getLogs','getComparison','getClassLogs','getCourseContent','getTajweedReports']);
+const RO=new Set(['getDepartments','getCourses','getUsers','getReports','getDashboardStats','getTimetable','getWeeklyPlan','getLogs','getComparison','getClassLogs','getCourseContent','getTajweedReports','getNotifications']);
 async function api(p){
   if(!RO.has(p.action)){const r=await apiRaw(p);RC={};return r;}
   const k=JSON.stringify(p),h=RC[k];
@@ -2883,7 +2977,7 @@ async function doSync(){
   const r=await apiRaw({action:'sync'});if(!r||!r.ok)return;
   if(r.live)renderLive(r.live);
   if(LASTVER!==null&&r.ver!==LASTVER){
-    RC={};if(SESSION.user.role==='teacher')refreshMe();const a=document.activeElement,typing=a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName);
+    RC={};if(SESSION.user.role==='teacher')refreshMe();if(SESSION.user.role!=='admin')checkNotifications();const a=document.activeElement,typing=a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName);
     if(CUR&&CUR!=='t-submit'&&CUR!=='admin-ai'&&!typing&&PANEL_LOADERS[CUR])PANEL_LOADERS[CUR]();
   }
   LASTVER=r.ver;
@@ -3455,6 +3549,112 @@ function printTimetable(){
     const wef=f.length?fmtD(f[0])+' to '+(t.length?fmtD(t[t.length-1]):'open'):'—';
     return `<div class="${i<a.length-1?'pb':''}"><h2 style="margin:0 0 4px">${esc(L[0].LecturerName)}</h2><div style="margin-bottom:10px;color:#6b7280">W.E.F. ${wef} &nbsp;|&nbsp; ${L.length} classes · ${fmtH(hrs)} hours per week</div><table class="ls"><thead><tr><th>Day</th><th>Time</th><th>Course / Subject</th><th>Department</th><th>Year / Semester</th><th>Location / Block</th><th>From – To date</th></tr></thead><tbody>${L.map(s=>`<tr><td>${esc(s.Day)}</td><td>${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}</td><td>${esc(s.CourseName||'—')}</td><td>${esc(s.DeptName||'—')}</td><td>${esc(s.StudentYear||'—')} · ${esc(s.Semester||'—')}</td><td>${esc(s.Room||'—')}</td><td>${fmtRange(s)}</td></tr>`).join('')}</tbody></table></div>`;}).join('');
   openPrint('Weekly timetable',body);
+}
+
+// ════════════════════════════════════════════════════════════
+//  V3.6 — notifications: popup after login, admin management
+// ════════════════════════════════════════════════════════════
+let NT_LIST=[],NT_QUEUE=[],NT_IDX=0,NT_SHOWN=new Set(),NT_ACK=new Set(),NT_OPEN=false,NT_MODE='queue',NT_ADMIN=[],NF_SEL=new Set();
+const NT_PRI={info:{label:'Information',icon:'🔔',cls:'np-info',col:'#1a2744'},important:{label:'Important',icon:'📢',cls:'np-imp',col:'#d97706'},urgent:{label:'Urgent',icon:'🚨',cls:'np-urg',col:'#dc2626'}};
+function goPanel(id){document.querySelectorAll('.ni').forEach(x=>x.classList.toggle('active',x.dataset.panel===id));showPanel(id);}
+// ── popup shown to the recipient ──
+function renderNotifPopup(n,info){
+  const p=NT_PRI[n.Priority]||NT_PRI.info,g=i=>document.getElementById(i);
+  g('np-head').className='np-head '+p.cls;g('np-icon').textContent=p.icon;g('np-tag').textContent=p.label;
+  g('np-ttl').textContent=n.Title||'';g('np-msg').textContent=n.Message||'';
+  g('np-meta').innerHTML='From the Administration · Isra University'+(n.CreatedAt?' · '+fmtD(n.CreatedAt):'')+(n.Repeat?' · <b>This notice appears at every login</b>':'');
+  const preview=NT_MODE!=='queue';
+  g('np-later').style.display=preview?'none':'';g('np-ok').textContent=preview?'Close':'Got it';
+  g('np-dots').innerHTML=info&&info.total>1?Array.from({length:info.total},(_,i)=>`<span class="${i===info.idx?'on':''}"></span>`).join(''):'';
+  g('npop').style.display='flex';NT_OPEN=true;
+}
+function showNotif(){NT_MODE='queue';renderNotifPopup(NT_QUEUE[NT_IDX],{idx:NT_IDX,total:NT_QUEUE.length});}
+function closeNotif(){const e=document.getElementById('npop');if(e)e.style.display='none';NT_OPEN=false;NT_QUEUE=[];NT_IDX=0;NT_MODE='queue';updateBell();}
+function ackNotif(){
+  if(NT_MODE!=='queue'){closeNotif();return;}
+  const n=NT_QUEUE[NT_IDX];NT_SHOWN.add(n.NotifID);NT_ACK.add(n.NotifID);
+  if(!n.Repeat&&!n.Read){n.Read=true;apiRaw({action:'markNotificationRead',notifId:n.NotifID});}
+  NT_IDX++;if(NT_IDX<NT_QUEUE.length)showNotif();else closeNotif();
+}
+function laterNotif(){NT_QUEUE.forEach(n=>NT_SHOWN.add(n.NotifID));closeNotif();}
+async function checkNotifications(){
+  if(!SESSION||SESSION.user.role==='admin'||!GAS_URL)return;
+  const r=await apiRaw({action:'getMyNotifications'});if(!r||!r.ok)return;
+  NT_LIST=r.notifications||[];updateBell();
+  if(NT_OPEN)return;
+  const q=NT_LIST.filter(n=>(!n.Read||n.Repeat)&&!NT_SHOWN.has(n.NotifID));
+  if(q.length){NT_QUEUE=q;NT_IDX=0;showNotif();}
+}
+function updateBell(){
+  const c=document.getElementById('tb-bell-cnt');if(!c)return;
+  const n=NT_LIST.filter(x=>!x.Read&&!NT_ACK.has(x.NotifID)).length;c.textContent=n;c.style.display=n?'':'none';
+}
+function openNoticeBoard(){
+  const L=NT_LIST;
+  document.getElementById('notice-list').innerHTML=L.length?L.map((n,i)=>{const p=NT_PRI[n.Priority]||NT_PRI.info,isNew=!n.Read&&!NT_ACK.has(n.NotifID);
+    return `<div onclick="viewNotice(${i})" style="display:flex;gap:10px;align-items:flex-start;padding:11px 10px;border:1px solid var(--border);border-left:4px solid ${p.col};border-radius:8px;margin-bottom:8px;cursor:pointer;background:${isNew?'var(--gold-bg)':'#fff'}"><div style="font-size:20px">${p.icon}</div><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">${esc(n.Title)} ${isNew?'<span class="b b-gold" style="font-size:10px">New</span>':''}</div><div style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(n.Message)}</div><div style="font-size:10.5px;color:var(--subtle);margin-top:2px">${p.label} · ${fmtD(n.CreatedAt)}</div></div></div>`;}).join(''):'<div class="empty"><div class="ei">🔔</div><h3>No notifications right now</h3></div>';
+  openModal('mnotice');
+}
+function viewNotice(i){const n=NT_LIST[i];if(!n)return;closeModal('mnotice');NT_MODE='view';renderNotifPopup(n,null);NT_ACK.add(n.NotifID);if(!n.Read&&!n.Repeat){n.Read=true;apiRaw({action:'markNotificationRead',notifId:n.NotifID});}updateBell();}
+// ── admin: manage notifications ──
+const ntAud=n=>n.Audience==='all'?'Everyone (coordinators and teachers)':n.Audience==='coordinators'?'All coordinators':n.Audience==='teachers'?'All teachers':(n.TargetNames||'').split(', ').slice(0,3).join(', ')+(n.TargetList&&n.TargetList.length>3?' +'+(n.TargetList.length-3)+' more':'');
+async function loadNotify(){
+  const r=await api({action:'getNotifications'});if(!r.ok){toast(r.error||'Failed to load notifications','err');return;}
+  NT_ADMIN=r.notifications||[];const today=ymdNow();
+  const live=n=>n.Status!=='inactive'&&(!n.StartDate||n.StartDate<=today)&&(!n.EndDate||n.EndDate>=today);
+  document.getElementById('nt-stats').innerHTML=statCards([['🔔','Total',NT_ADMIN.length],['🟢','Live now',NT_ADMIN.filter(live).length],['🚨','Urgent (live)',NT_ADMIN.filter(n=>live(n)&&n.Priority==='urgent').length],['⏸️','Paused',NT_ADMIN.filter(n=>n.Status==='inactive').length]]);
+  document.getElementById('nt-tbl').innerHTML=NT_ADMIN.length?NT_ADMIN.map((n,i)=>{const p=NT_PRI[n.Priority]||NT_PRI.info,pc=n.RecipientCount?Math.round(n.SeenCount/n.RecipientCount*100):0;
+    const st=n.Status==='inactive'?'<span class="b b-n">Paused</span>':live(n)?'<span class="b b-g">Live</span>':'<span class="b b-y">Scheduled / expired</span>';
+    return `<tr><td style="max-width:300px"><span class="nt-dot" style="background:${p.col}"></span><strong>${esc(n.Title)}</strong> <span class="b b-n" style="font-size:10px">${p.label}</span><div style="font-size:11.5px;color:var(--muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(n.Message)}</div>${n.Repeat?'<div style="font-size:10.5px;color:var(--teal)">↻ Shown at every login</div>':''}</td>
+    <td style="font-size:12px">${esc(ntAud(n))}<div style="color:var(--muted)">${n.RecipientCount} people</div></td>
+    <td style="font-size:11.5px;white-space:nowrap">${n.StartDate?fmtD(n.StartDate):'—'} – ${n.EndDate?fmtD(n.EndDate):'open'}</td>
+    <td><a style="cursor:pointer;color:var(--teal);font-weight:600" onclick="openSeen('${esc(n.NotifID)}')">${n.SeenCount}/${n.RecipientCount}</a><div class="pb" style="margin-top:4px"><div class="pb-f pb-g" style="width:${pc}%"></div></div></td>
+    <td>${st}</td>
+    <td style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn btn-out btn-xs" onclick="previewNotifAt(${i})">👁</button><button class="btn btn-out btn-xs" onclick="openNotifModal('${esc(n.NotifID)}')">Edit</button><button class="btn btn-out btn-xs" onclick="toggleNotif('${esc(n.NotifID)}','${n.Status==='inactive'?'active':'inactive'}')">${n.Status==='inactive'?'Resume':'Pause'}</button><button class="btn btn-del btn-xs" onclick="delNotif('${esc(n.NotifID)}')">Delete</button></td></tr>`;}).join(''):'<tr><td colspan="6"><div class="empty"><div class="ei">🔔</div><h3>No notifications yet</h3><p>Create one to alert coordinators and teachers.</p></div></td></tr>';
+}
+function setPri(p){document.getElementById('nf-pri').value=p;['info','important','urgent'].forEach(k=>{const e=document.getElementById('pri-'+k);e.className='pri-opt'+(k===p?' sel-'+k:'');});}
+function onNfAud(){document.getElementById('nf-people-w').style.display=document.getElementById('nf-aud').value==='selected'?'':'none';if(document.getElementById('nf-aud').value==='selected')renderNfPeople();}
+function nfPeople(){return USERS_ALL.filter(u=>(u.Role==='teacher'||u.Role==='coordinator')&&u.Status==='active');}
+function renderNfPeople(){
+  const q=(document.getElementById('nf-q').value||'').toLowerCase(),L=nfPeople().filter(u=>!q||String(u.FullName).toLowerCase().includes(q));
+  document.getElementById('nf-people').innerHTML=L.length?['coordinator','teacher'].map(role=>{const M=L.filter(u=>u.Role===role);return M.length?`<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:6px 4px 2px">${role==='coordinator'?'Coordinators':'Lecturers'}</div>`+M.map(u=>`<label style="display:flex;gap:8px;align-items:center;padding:4px;cursor:pointer;font-size:13px"><input type="checkbox" ${NF_SEL.has(u.UserID)?'checked':''} onchange="nfToggle('${esc(u.UserID)}',this.checked)">${esc(u.FullName)}</label>`).join(''):'';}).join(''):'<div style="color:var(--muted);font-size:12px;padding:6px">No people found</div>';
+  document.getElementById('nf-people-hint').textContent=NF_SEL.size+' selected';
+}
+function nfToggle(id,on){if(on)NF_SEL.add(id);else NF_SEL.delete(id);document.getElementById('nf-people-hint').textContent=NF_SEL.size+' selected';}
+function nfPickRole(role){NF_SEL=role?new Set(nfPeople().filter(u=>u.Role===role).map(u=>u.UserID)):new Set();renderNfPeople();}
+async function openNotifModal(id){
+  if(SESSION.user.role!=='admin')return;
+  if(!USERS_ALL.length){const ur=await api({action:'getUsers'});if(ur.ok)USERS_ALL=ur.users;}
+  const n=id?NT_ADMIN.find(x=>x.NotifID===id):null,g=i=>document.getElementById(i);
+  g('nf-id').value=n?n.NotifID:'';g('mnotif-title').textContent=n?'Edit Notification':'New Notification';
+  g('nf-title').value=n?n.Title:'';g('nf-msg').value=n?n.Message:'';setPri(n?n.Priority:'info');
+  g('nf-aud').value=n?n.Audience:'all';NF_SEL=new Set(n?n.TargetList:[]);g('nf-q').value='';onNfAud();
+  g('nf-from').value=n?(n.StartDate||''):'';g('nf-to').value=n?(n.EndDate||''):'';g('nf-repeat').checked=!!(n&&n.Repeat);g('nf-resend').checked=false;
+  g('nf-resend-w').style.display=n?'flex':'none';g('nf-save').textContent=n?'Save Changes':'Publish';
+  openModal('mnotif');
+}
+function nfValues(){const g=i=>document.getElementById(i);return {title:g('nf-title').value.trim(),message:g('nf-msg').value.trim(),priority:g('nf-pri').value,audience:g('nf-aud').value,targetIds:[...NF_SEL],startDate:g('nf-from').value,endDate:g('nf-to').value,repeat:g('nf-repeat').checked};}
+function previewNotif(){const v=nfValues();if(!v.title&&!v.message){toast('Enter a title and message to preview','warn');return;}NT_MODE='preview';renderNotifPopup({Title:v.title||'(No title)',Message:v.message||'',Priority:v.priority,Repeat:v.repeat,CreatedAt:new Date().toISOString()},null);}
+function previewNotifAt(i){const n=NT_ADMIN[i];if(!n)return;NT_MODE='preview';renderNotifPopup(n,null);}
+async function saveNotif(){
+  const v=nfValues(),g=i=>document.getElementById(i);
+  if(!v.title){toast('Title is required','warn');return;}
+  if(!v.message){toast('Message is required','warn');return;}
+  if(v.audience==='selected'&&!v.targetIds.length){toast('Select at least one person','warn');return;}
+  if(v.startDate&&v.endDate&&v.endDate<v.startDate){toast('End date cannot be before the start date','warn');return;}
+  const b=g('nf-save');b.disabled=true;
+  const r=await api({action:'saveNotification',notifId:g('nf-id').value,...v,resend:g('nf-resend').checked});
+  b.disabled=false;if(!r.ok){toast(r.error||'Save failed','err');return;}
+  closeModal('mnotif');toast(g('nf-id').value?'Notification updated':'Notification published','ok');loadNotify();
+}
+async function toggleNotif(id,st){const r=await api({action:'setNotificationStatus',notifId:id,status:st});if(r.ok){toast(st==='inactive'?'Notification paused':'Notification resumed','ok');loadNotify();}else toast(r.error||'Failed','err');}
+async function delNotif(id){const n=NT_ADMIN.find(x=>x.NotifID===id);if(!confirm('Delete "'+(n?n.Title:'this notification')+'"?'))return;const r=await api({action:'deleteNotification',notifId:id});if(r.ok){toast('Notification deleted','ok');loadNotify();}else toast(r.error||'Delete failed','err');}
+async function openSeen(id){
+  const n=NT_ADMIN.find(x=>x.NotifID===id),r=await api({action:'getNotificationSeen',notifId:id});if(!r.ok){toast(r.error||'Failed','err');return;}
+  const S=r.recipients.filter(x=>x.seen),U=r.recipients.filter(x=>!x.seen),row=x=>`<div style="display:flex;justify-content:space-between;padding:5px 2px;border-bottom:1px solid var(--border);font-size:13px"><span>${esc(x.name)} <span style="color:var(--muted);font-size:11px">${esc(x.role)}</span></span><span style="color:var(--muted);font-size:11.5px">${x.readAt?fmtDT(x.readAt):''}</span></div>`;
+  document.getElementById('mseen-title').textContent='Seen by — '+(n?n.Title:'');
+  document.getElementById('seen-body').innerHTML=`<div style="font-weight:700;color:var(--green);margin-bottom:4px">✅ Seen (${S.length})</div>${S.map(row).join('')||'<div style="color:var(--muted);font-size:12px">Nobody yet</div>'}<div style="font-weight:700;color:var(--amber);margin:14px 0 4px">⏳ Not seen yet (${U.length})</div>${U.map(row).join('')||'<div style="color:var(--muted);font-size:12px">Everyone has seen it</div>'}`;
+  openModal('mseen');
 }
 </script>
 </body>
