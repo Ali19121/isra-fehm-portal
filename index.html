@@ -320,6 +320,14 @@ tbody tr:hover td{background:#faf9f7}
 .sch-cur{background:var(--gold-bg);border-left:3px solid var(--gold)}
 .sch-fut{opacity:.5}
 
+/* Multi-select chips (timetable combined classes) */
+.msel{display:flex;flex-wrap:wrap;gap:6px;border:1px solid var(--border);border-radius:7px;padding:8px;background:#fff}
+.msel .mc{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border:1.5px solid var(--border);border-radius:16px;font-size:12.5px;cursor:pointer;user-select:none;background:#fafaf8;color:var(--text);transition:all .12s}
+.msel .mc:hover{border-color:var(--navy)}
+.msel .mc.on{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:600}
+.msel .mc.all{border-style:dashed;font-weight:600;color:var(--navy)}
+.msel .mc.all.on{color:#fff;border-style:solid}
+.cmb-badge{display:inline-block;font-size:10px;font-weight:700;background:#fef3c7;color:#b45309;border-radius:9px;padding:1px 7px;margin-left:4px;vertical-align:middle}
 /* Timetable mode toggle */
 .mode-wrap{display:flex;gap:8px;margin-bottom:4px}
 .mode-btn{flex:1;padding:13px;border:2px solid var(--border);border-radius:9px;
@@ -1616,9 +1624,9 @@ tbody tr{transition:background .12s}
     <div class="fg"><label>From time *</label><input type="time" id="slot-start" value="08:00"></div>
     <div class="fg"><label>To time *</label><input type="time" id="slot-end" value="09:00"></div>
     <div class="fg"><label>Course / Subject *</label><select id="slot-course"><option value="">Select course</option></select></div>
-    <div class="fg"><label>Department *</label><select id="slot-dept"><option value="">Select department</option></select></div>
-    <div class="fg"><label>Year *</label><select id="slot-year"><option value="">Select year</option><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option><option>5th Year</option></select></div>
-    <div class="fg"><label>Semester *</label><select id="slot-sem"><option value="">Select semester</option><option>Semester 1</option><option>Semester 2</option><option>Semester 3</option><option>Semester 4</option><option>Semester 5</option><option>Semester 6</option><option>Semester 7</option><option>Semester 8</option></select></div>
+    <div class="fg" style="grid-column:1/-1"><label>Departments * <span style="text-transform:none;font-weight:500;color:var(--subtle)">(select one or more for a combined class)</span></label><div class="msel" id="slot-dept-box"></div></div>
+    <div class="fg" style="grid-column:1/-1"><label>Years * <span style="text-transform:none;font-weight:500;color:var(--subtle)">(one or more)</span></label><div class="msel" id="slot-year-box"></div></div>
+    <div class="fg" style="grid-column:1/-1"><label>Semesters * <span style="text-transform:none;font-weight:500;color:var(--subtle)">(one or more)</span></label><div class="msel" id="slot-sem-box"></div><div class="hint">If several departments, years or semesters are ticked, the class is saved as one combined slot and its hours are counted once.</div></div>
     <div class="fg" style="grid-column:1/-1"><label>Class location / block name *</label><input type="text" id="slot-room" placeholder="e.g. Block A, Room 12"></div>
     <div class="fg" id="slot-coord-w" style="grid-column:1/-1"><label>Show this slot to coordinator(s)</label><div id="slot-coord-list" style="display:flex;flex-wrap:wrap;gap:6px 18px;border:1px solid var(--border);border-radius:7px;padding:8px"></div><div class="hint">The teacher's own coordinator is ticked by default. You can tick more than one, or none.</div></div>
    </div>
@@ -2083,7 +2091,7 @@ async function loadCourses() {
 }
 
 function populateDeptSelects() {
-  ['pf-dept','usr-dept','rf-dept','u-dept','c-dept','slot-dept','ttf-dept'].forEach(id => {
+  ['pf-dept','usr-dept','rf-dept','u-dept','c-dept','ttf-dept'].forEach(id => {
     const el=document.getElementById(id); if(!el) return;
     const cur=el.value;
     while(el.options.length>1) el.remove(1);
@@ -3051,7 +3059,7 @@ async function loadCompare(){
 // ── Admin: timetable department → teacher ──
 function renderTTBy(slots){
   const el=document.getElementById('tt-by');if(!el)return;const g={};
-  slots.forEach(s=>{const d=s.DeptName||'—',t=s.LecturerName||'—';((g[d]=g[d]||{})[t]=g[d][t]||[]).push(s);});
+  slots.forEach(s=>{const t=s.LecturerName||'—';(((s.DeptName||'—').split(', ')).filter(Boolean)).forEach(d=>{((g[d]=g[d]||{})[t]=g[d][t]||[]).push(s);});});
   const ord=s=>DAYS.indexOf(s.Day)*10000+(parseInt(String(s.StartTime||'0:0').replace(':',''),10)||0);
   const chip=s=>`<div style="background:${s.Mode==='Online'?'#eff6ff':'#f0fdf4'};border:1px solid ${s.Mode==='Online'?'#bfdbfe':'#bbf7d0'};border-radius:6px;padding:5px 9px;font-size:11.5px"><b>${esc((s.Day||'').slice(0,3))}</b> · ${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}<div style="color:var(--muted)">${esc(s.CourseName||'')}${s.Section?' · '+esc(s.Section):''}</div><div style="color:var(--muted);font-size:10.5px">${fmtRange(s)}</div></div>`;
   const body=Object.keys(g).length?Object.keys(g).sort().map(d=>`<div style="margin-bottom:16px"><div style="font-weight:700;color:var(--navy);padding-bottom:6px;border-bottom:2px solid var(--gold);margin-bottom:6px">🏛️ ${esc(d)}</div>`+Object.keys(g[d]).sort().map(t=>{const L=g[d][t].sort((a,b)=>ord(a)-ord(b));return `<div style="display:flex;gap:14px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed var(--border)"><div style="min-width:190px"><strong>${esc(t)}</strong><div style="font-size:11px;color:var(--muted)">${L.length} ${L.length===1?'class':'classes'} per week</div></div><div style="display:flex;flex-wrap:wrap;gap:6px;flex:1">${L.map(chip).join('')}</div></div>`;}).join('')+'</div>').join(''):'<div class="empty"><div class="ei">📅</div><h3>No slots</h3></div>';
@@ -3424,7 +3432,25 @@ function printTjReports(){
 // ════════════════════════════════════════════════════════════
 //  V3.5 — weekly timetable: roster, weekly load, permissions
 // ════════════════════════════════════════════════════════════
-let SLOT_COORD=new Set();
+let SLOT_COORD=new Set(),SLOT_DEPT=new Set(),SLOT_YEAR=new Set(),SLOT_SEM=new Set();
+const SLOT_YEARS=['1st Year','2nd Year','3rd Year','4th Year','5th Year'],SLOT_SEMS=['Semester 1','Semester 2','Semester 3','Semester 4','Semester 5','Semester 6','Semester 7','Semester 8'];
+const MSEL_SETS={dept:()=>SLOT_DEPT,year:()=>SLOT_YEAR,sem:()=>SLOT_SEM};
+function msItems(k){return k==='dept'?DEPTS.map(d=>[d.DeptID,d.DeptName]):k==='year'?SLOT_YEARS.map(x=>[x,x]):SLOT_SEMS.map(x=>[x,x]);}
+function renderMsel(k){
+  const el=document.getElementById('slot-'+k+'-box');if(!el)return;
+  const S=MSEL_SETS[k](),items=msItems(k),all=items.length&&items.every(x=>S.has(x[0]));
+  el.innerHTML=`<span class="mc all ${all?'on':''}" onclick="mselAll('${k}')">${all?'✓ ':''}Select all</span>`+items.map(x=>`<span class="mc ${S.has(x[0])?'on':''}" onclick="mselToggle('${k}',this.dataset.v)" data-v="${esc(x[0])}">${S.has(x[0])?'✓ ':''}${esc(x[1])}</span>`).join('');
+}
+function mselToggle(k,v){const S=MSEL_SETS[k]();if(S.has(v))S.delete(v);else S.add(v);renderMsel(k);}
+function mselAll(k){const S=MSEL_SETS[k](),items=msItems(k),all=items.every(x=>S.has(x[0]));items.forEach(x=>all?S.delete(x[0]):S.add(x[0]));renderMsel(k);}
+function renderAllMsel(){['dept','year','sem'].forEach(renderMsel);}
+// compact "1st, 2nd Year · Sem 1, 3" text for combined classes
+function ysShort(s){
+  const y=(s.Years||[]).map(x=>x.replace(' Year','')),m=(s.Sems||[]).map(x=>x.replace('Semester ',''));
+  return [y.length?y.join(', ')+' Year':'',m.length?(m.length>1?'Sem ':'Sem ')+m.join(', '):''].filter(Boolean).join(' · ');
+}
+const isCombined=s=>((s.DeptIds||[]).length>1||(s.Years||[]).length>1||(s.Sems||[]).length>1);
+const cmbBadge=s=>isCombined(s)?'<span class="cmb-badge" title="Combined class">🔗 Combined</span>':'';
 const TT_PAL=[['#e0f2fe','#0369a1'],['#dcfce7','#15803d'],['#fef3c7','#b45309'],['#fce7f3','#be185d'],['#ede9fe','#6d28d9'],['#ffedd5','#c2410c'],['#cffafe','#0e7490'],['#fee2e2','#b91c1c'],['#e0e7ff','#4338ca'],['#ecfccb','#4d7c0f']];
 const AV_PAL=[['#1a2744','#2d3f6e'],['#1d6e63','#24897b'],['#9333ea','#c084fc'],['#c2410c','#fb923c'],['#be185d','#f472b6'],['#0369a1','#38bdf8'],['#4d7c0f','#a3e635'],['#b45309','#fbbf24']];
 const hashN=s=>{let n=0;for(const c of String(s||''))n=(n*31+c.charCodeAt(0))%9973;return n;};
@@ -3452,7 +3478,7 @@ function renderTTRoster(p,slots){
     h+=`<tr><td class="tn"><div style="display:flex;align-items:center;gap:10px"><div class="avt" style="background:linear-gradient(135deg,${av[0]},${av[1]})">${esc(initials(x.name))}</div><div><div style="font-weight:700;font-size:13px">${esc(x.name)}</div><div style="font-size:10.5px;color:var(--muted)">${esc(x.dept)}</div></div></div></td>`;
     DAYS.forEach(d=>{
       const ds=x.slots.filter(s=>s.Day===d).sort((a,b)=>tmin(a.StartTime)-tmin(b.StartTime));
-      h+='<td>'+ds.map(s=>{const c=courseColor(s.CourseID);return `<div class="ttc" style="background:${c[0]};border-left:3px solid ${c[1]};color:${c[1]}"><b>${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}</b>${esc(s.CourseName||'')}<div class="s">${esc([s.StudentYear,s.Semester].filter(Boolean).join(' · '))}</div><div class="s">📍 ${esc(s.Room||'—')}</div></div>`;}).join('')+'</td>';
+      h+='<td>'+ds.map(s=>{const c=courseColor(s.CourseID);return `<div class="ttc" style="background:${c[0]};border-left:3px solid ${c[1]};color:${c[1]}"><b>${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}</b>${esc(s.CourseName||'')}<div class="s">${esc(ysShort(s))}</div><div class="s">📍 ${esc(s.Room||'—')}</div></div>`;}).join('')+'</td>';
     });
     h+=`<td><div style="font-size:14px;font-weight:700;color:${t[0]}">${fmtH(x.hours)} h</div><div style="font-size:10.5px;color:var(--muted)">${x.slots.length} classes</div><div class="ldb"><div style="width:${w}%;background:linear-gradient(90deg,${t[0]},${t[1]})"></div></div></td></tr>`;
   });
@@ -3466,8 +3492,8 @@ function renderTTList(slots,tbId,mode){
   tb.innerHTML=L.length?L.map(s=>{
     const c=courseColor(s.CourseID),course=`<span class="b" style="background:${c[0]};color:${c[1]}">${esc(s.CourseName||'—')}</span>`,when=`<td><strong>${esc(s.Day)}</strong></td><td style="font-size:12px;white-space:nowrap">${fmtT(s.StartTime)} – ${fmtT(s.EndTime)}</td>`;
     const ys=`<td style="font-size:12px">${esc(s.StudentYear||'—')}<div style="color:var(--muted)">${esc(s.Semester||'')}</div></td>`,loc=`<td style="font-size:12px">${esc(s.Room||'—')}</td>`,rg=`<td style="font-size:11.5px;white-space:nowrap">${fmtRange(s)}</td>`;
-    if(mode==='teacher')return `<tr>${when}<td>${course}</td><td style="font-size:12px">${esc(s.DeptName||'—')}</td>${ys}${loc}${rg}</tr>`;
-    return `<tr><td><strong>${esc(s.LecturerName||'—')}</strong></td><td style="font-size:12px">${esc(s.DeptName||'—')}</td><td>${course}</td>${ys}${when}${loc}${rg}`+(mode==='admin'?`<td style="font-size:11.5px;color:var(--muted)">${esc(s.CoordNames||'—')}</td><td style="display:flex;gap:4px"><button class="btn btn-out btn-xs" onclick="editSlotId('${esc(s.SlotID)}')">Edit</button><button class="btn btn-del btn-xs" onclick="delSlot('${esc(s.SlotID)}')">Delete</button></td>`:'')+'</tr>';
+    if(mode==='teacher')return `<tr>${when}<td>${course}</td><td style="font-size:12px">${esc(s.DeptName||'—')}${cmbBadge(s)}</td>${ys}${loc}${rg}</tr>`;
+    return `<tr><td><strong>${esc(s.LecturerName||'—')}</strong></td><td style="font-size:12px">${esc(s.DeptName||'—')}${cmbBadge(s)}</td><td>${course}</td>${ys}${when}${loc}${rg}`+(mode==='admin'?`<td style="font-size:11.5px;color:var(--muted)">${esc(s.CoordNames||'—')}</td><td style="display:flex;gap:4px"><button class="btn btn-out btn-xs" onclick="editSlotId('${esc(s.SlotID)}')">Edit</button><button class="btn btn-del btn-xs" onclick="delSlot('${esc(s.SlotID)}')">Delete</button></td>`:'')+'</tr>';
   }).join(''):`<tr><td colspan="${cols}"><div class="empty"><div class="ei">📅</div><h3>No timetable slots</h3></div></td></tr>`;
 }
 async function ttLoad(p){
@@ -3495,7 +3521,7 @@ function toggleSlotCoord(id,on){if(on)SLOT_COORD.add(id);else SLOT_COORD.delete(
 function onSlotLecChange(){
   const g=i=>document.getElementById(i),id=g('slot-lec').value,u=USERS_ALL.find(x=>x.UserID===id);
   fillSlotCourses(id);if(!u)return;
-  if(u.DepartmentID)g('slot-dept').value=u.DepartmentID;
+  if(!g('slot-edit-id').value&&u.DepartmentID&&!SLOT_DEPT.size){SLOT_DEPT.add(u.DepartmentID);renderMsel('dept');}
   if(!g('slot-edit-id').value){SLOT_COORD=new Set(u.CoordinatorID?[u.CoordinatorID]:[]);renderSlotCoords();}
 }
 async function openSlotModal(){
@@ -3503,10 +3529,10 @@ async function openSlotModal(){
   if(!USERS_ALL.length){const ur=await api({action:'getUsers'});if(ur.ok)USERS_ALL=ur.users;}
   const g=i=>document.getElementById(i);
   g('slot-edit-id').value='';g('mslot-title').textContent='Add Timetable Slot';
-  ['slot-day','slot-from','slot-to','slot-year','slot-sem','slot-room'].forEach(i=>g(i).value='');
+  ['slot-day','slot-from','slot-to','slot-room'].forEach(i=>g(i).value='');
+  SLOT_DEPT=new Set();SLOT_YEAR=new Set();SLOT_SEM=new Set();renderAllMsel();
   g('slot-start').value='08:00';g('slot-end').value='09:00';
   fillOpts('slot-lec',slotLecList().map(x=>[x.UserID,x.FullName]));g('slot-lec').value='';
-  fillOpts('slot-dept',DEPTS.map(d=>[d.DeptID,d.DeptName]));g('slot-dept').value='';
   fillSlotCourses('');g('slot-course').value='';
   SLOT_COORD=new Set();renderSlotCoords();g('slot-coord-w').style.display=SESSION.user.role==='admin'?'':'none';
   openModal('mslot');
@@ -3517,23 +3543,26 @@ async function editSlot(s){
   const g=i=>document.getElementById(i);
   g('slot-edit-id').value=s.SlotID;g('mslot-title').textContent='Edit Timetable Slot';
   fillOpts('slot-lec',USERS_ALL.filter(x=>x.Role==='teacher').map(x=>[x.UserID,x.FullName]));g('slot-lec').value=s.LecturerID;
-  fillOpts('slot-dept',DEPTS.map(d=>[d.DeptID,d.DeptName]));g('slot-dept').value=s.DeptID||'';
+  SLOT_DEPT=new Set(s.DeptIds||[]);SLOT_YEAR=new Set(s.Years||[]);SLOT_SEM=new Set(s.Sems||[]);renderAllMsel();
   fillSlotCourses(s.LecturerID);g('slot-course').value=s.CourseID||'';
   g('slot-day').value=s.Day;g('slot-from').value=s.EffectiveFrom||'';g('slot-to').value=s.EffectiveTo||'';
-  g('slot-start').value=s.StartTime;g('slot-end').value=s.EndTime;g('slot-year').value=s.StudentYear||'';g('slot-sem').value=s.Semester||'';g('slot-room').value=s.Room||'';
+  g('slot-start').value=s.StartTime;g('slot-end').value=s.EndTime;g('slot-room').value=s.Room||'';
   SLOT_COORD=new Set(s.CoordIds||[]);renderSlotCoords();g('slot-coord-w').style.display='';
   openModal('mslot');
 }
 function editSlotId(id){editSlot(TT_CUR.find(s=>s.SlotID===id));}
 async function saveSlot(){
   const g=i=>document.getElementById(i).value,id=g('slot-edit-id');
-  const need=[['slot-lec','teacher'],['slot-day','day'],['slot-from','from date'],['slot-to','to date'],['slot-start','from time'],['slot-end','to time'],['slot-course','course'],['slot-dept','department'],['slot-year','year'],['slot-sem','semester']];
+  const need=[['slot-lec','teacher'],['slot-day','day'],['slot-from','from date'],['slot-to','to date'],['slot-start','from time'],['slot-end','to time'],['slot-course','course']];
   for(const [i,n] of need){if(!g(i)){toast('Please select the '+n,'warn');return;}}
+  if(!SLOT_DEPT.size){toast('Please select at least one department','warn');return;}
+  if(!SLOT_YEAR.size){toast('Please select at least one year','warn');return;}
+  if(!SLOT_SEM.size){toast('Please select at least one semester','warn');return;}
   if(!g('slot-room').trim()){toast('Please enter the class location / block name','warn');return;}
   if(g('slot-to')<g('slot-from')){toast('To date cannot be before the from date','warn');return;}
   if(g('slot-end')<=g('slot-start')){toast('To time must be after the from time','warn');return;}
   const b=document.getElementById('slot-save');b.disabled=true;
-  const r=await api({action:id?'updateTimetableSlot':'addTimetableSlot',slotId:id,lecturerId:g('slot-lec'),day:g('slot-day'),effectiveFrom:g('slot-from'),effectiveTo:g('slot-to'),startTime:g('slot-start'),endTime:g('slot-end'),courseId:g('slot-course'),deptId:g('slot-dept'),studentYear:g('slot-year'),semester:g('slot-sem'),room:g('slot-room'),coordinatorIds:SESSION.user.role==='admin'?[...SLOT_COORD]:undefined});
+  const r=await api({action:id?'updateTimetableSlot':'addTimetableSlot',slotId:id,lecturerId:g('slot-lec'),day:g('slot-day'),effectiveFrom:g('slot-from'),effectiveTo:g('slot-to'),startTime:g('slot-start'),endTime:g('slot-end'),courseId:g('slot-course'),deptIds:[...SLOT_DEPT],studentYears:[...SLOT_YEAR],semesters:[...SLOT_SEM],room:g('slot-room'),coordinatorIds:SESSION.user.role==='admin'?[...SLOT_COORD]:undefined});
   b.disabled=false;
   if(!r.ok){toast(r.error||'Save failed','err');return;}
   closeModal('mslot');toast(id?'Slot updated':'Slot added','ok');
