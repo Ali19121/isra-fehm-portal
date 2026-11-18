@@ -1666,9 +1666,16 @@ function ttBuild(ss, caller, body, selfId) {
   const cd = ss.getSheetByName(SH.COURSES).getDataRange().getValues(), ch = cd[0];
   if (!cd.slice(1).some(r => r[ch.indexOf('CourseID')] === body.courseId && r[ch.indexOf('Status')] === 'active')) return { err:'The selected course was not found.' };
   if (!courseAllowed(ss, body.lecturerId, body.courseId)) return { err:'This course is not assigned to the selected teacher.' };
-  if (!body.deptId) return { err:'Please select a department.' };
-  if (!TT_YEARS.includes(body.studentYear)) return { err:'Please select the year.' };
-  if (!TT_SEMS.includes(body.semester)) return { err:'Please select the semester.' };
+  // Combined classes: one slot can cover several departments, years and semesters (stored comma-separated)
+  const asArr = (a, one) => Array.isArray(a) ? a : (a ? [a] : (one ? [one] : []));
+  const deptIds = [...new Set(asArr(body.deptIds, body.deptId).map(x => String(x).trim()).filter(Boolean))];
+  const years   = TT_YEARS.filter(y => asArr(body.studentYears, body.studentYear).includes(y));
+  const sems    = TT_SEMS.filter(x => asArr(body.semesters, body.semester).includes(x));
+  if (!deptIds.length) return { err:'Please select at least one department.' };
+  const allDepts = ss.getSheetByName(SH.DEPARTMENTS).getDataRange().getValues().slice(1).map(r => r[0]);
+  if (deptIds.some(id => !allDepts.includes(id))) return { err:'A selected department was not found.' };
+  if (!years.length) return { err:'Please select at least one year.' };
+  if (!sems.length)  return { err:'Please select at least one semester.' };
   const room = String(body.room || '').trim().slice(0, 120);
   if (!room) return { err:'Class location / block name is required.' };
   const coords = U.slice(1).filter(r => r[ix('Role')] === 'coordinator').map(r => r[ix('UserID')]);
@@ -1686,8 +1693,8 @@ function ttBuild(ss, caller, body, selfId) {
   });
   if (clash) return { err:'This teacher already has a class on ' + body.day + ' (' + hmTz(clash.StartTime, ss) + '–' + hmTz(clash.EndTime, ss) + ') in the same period.' };
   const cname = getCourseName(ss, body.courseId);
-  return { rec:{ LecturerID:body.lecturerId, LecturerName:lec[ix('FullName')], DeptID:body.deptId, DeptName:getDeptName(ss, body.deptId),
-    CourseID:body.courseId, CourseName:cname, Subject:cname, StudentYear:body.studentYear, Semester:body.semester, Day:body.day,
+  return { rec:{ LecturerID:body.lecturerId, LecturerName:lec[ix('FullName')], DeptID:deptIds.join(','), DeptName:deptIds.map(id => getDeptName(ss, id)).join(', '),
+    CourseID:body.courseId, CourseName:cname, Subject:cname, StudentYear:years.join(','), Semester:sems.join(','), Day:body.day,
     StartTime:body.startTime, EndTime:body.endTime, Room:room, EffectiveFrom:body.effectiveFrom, EffectiveTo:body.effectiveTo,
     CoordinatorIDs:ids.length ? ids.join(',') : '-' } };
 }
@@ -1706,20 +1713,22 @@ function getTimetable(caller, body) {
   slots.forEach(s => {
     s.StartTime = hmTz(s.StartTime, ss); s.EndTime = hmTz(s.EndTime, ss);
     s.EffectiveFrom = ymdTz(s.EffectiveFrom, ss); s.EffectiveTo = ymdTz(s.EffectiveTo, ss);
-    s.StudentYear = s.StudentYear || ''; s.Semester = s.Semester || '';
+    const sp = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
+    s.DeptIds = sp(s.DeptID); s.Years = sp(s.StudentYear); s.Sems = sp(s.Semester);
+    s.StudentYear = s.Years.join(', '); s.Semester = s.Sems.join(', ');
     s.CoordIds = String(s.CoordinatorIDs || '').split(',').filter(x => x && x !== '-');
     s.CoordNames = s.CoordIds.map(id => uname[id] || id).join(', ');
   });
   if (caller.role === 'teacher') slots = slots.filter(s => s.LecturerID === caller.id);
   if (caller.role === 'coordinator')
     slots = slots.filter(s => s.CoordIds.includes(caller.id) || (!String(s.CoordinatorIDs || '').trim() && ucoord[s.LecturerID] === caller.id));
-  if (body.deptId)      slots = slots.filter(s => s.DeptID      === body.deptId);
+  if (body.deptId)      slots = slots.filter(s => s.DeptIds.includes(body.deptId));
   if (body.courseId)    slots = slots.filter(s => s.CourseID    === body.courseId);
   if (body.day)         slots = slots.filter(s => s.Day         === body.day);
   if (body.mode)        slots = slots.filter(s => s.Mode        === body.mode);
   if (body.lecturerId)  slots = slots.filter(s => s.LecturerID  === body.lecturerId);
-  if (body.studentYear) slots = slots.filter(s => s.StudentYear === body.studentYear);
-  if (body.semester)    slots = slots.filter(s => s.Semester    === body.semester);
+  if (body.studentYear) slots = slots.filter(s => s.Years.includes(body.studentYear));
+  if (body.semester)    slots = slots.filter(s => s.Sems.includes(body.semester));
   if (body.activeOn)    slots = slots.filter(s => (!s.EffectiveFrom || s.EffectiveFrom <= body.activeOn) && (!s.EffectiveTo || s.EffectiveTo >= body.activeOn));
   return { ok:true, slots };
 }
